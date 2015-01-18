@@ -6,13 +6,9 @@ import com.mentisware.sort._
 case class IntNode (key: Int) extends Node[Int]
 
 trait RBTreeBehavior { this: UnitSpec =>
-  def performPrimitiveOperations(testSet: (List[Int], RBTree[Int, IntNode])) {
-    val (xs, tree) = testSet
+  def performPrimitiveOperations(xs: List[Int], tree: RBTree[Int, IntNode]) {
     val es = xs.map(IntNode(_))
     
-//    it should "insert test data in correct order" in {
-//      println(tree)
-//    }
     
     it should "return the minimum number" in {
       (tree.minimum) should equal (Some(IntNode(Orderer.selectSmallest(xs, 1))))
@@ -41,9 +37,7 @@ trait RBTreeBehavior { this: UnitSpec =>
     }
   }
   
-  def performComplexOperations(testSet: (List[Int], RBTree[Int, IntNode])) {
-
-    val (xs, tree) = testSet
+  def performComplexOperations(xs: List[Int], tree: RBTree[Int, IntNode]) {
     val es = xs.map(IntNode(_))
     val len = xs.length
 
@@ -59,26 +53,66 @@ trait RBTreeBehavior { this: UnitSpec =>
       t.validateRBProperty()
     }
   }
+  
+  def processOrderingStatistics(xs: List[Int], tree: RBTree[Int, IntNode]) {
+    val es = xs.map(IntNode(_))
+    val len = xs.length
+    val rnd = new scala.util.Random(System.currentTimeMillis())
+    
+    it should "select random orders correctly" in {
+      for (i <- 1 to len/2) {
+        val order = rnd.nextInt(len) + 1    // nextInt exclude len
+        (tree.selectSmallest(order).key) should equal (Orderer.selectSmallest(xs, order))
+      }
+    }
+    
+    it should "return correct rank information of random data in test set" in {
+      // we should take care of multiple identical keys
+      for (i <- 1 to len/2) {
+        val order = rnd.nextInt(len) + 1
+        val node = tree.selectSmallest(order)
+//        println("order = " + order + " with node key = " + node.key)
+//        (node.rankIn(tree)) should equal (order)
+        (tree.selectSmallest(node.rankIn(tree)).key) should equal (node.key)
+      }
+    }
+  } 
 }
 
 
 class RBTreeTest extends UnitSpec with RBTreeBehavior {
-  def testSet1 = {
+  def determinedSet = {
     val xs = List(3, 11, 10, -1, -45, 2, -4, 7, -5, 9, 1, 100, 2, 4, -100, 98, 46)
-    val tree = RBTree.build[Int, IntNode](xs.map(IntNode(_)))
-    (xs, tree)    
+    val rbTree = RBTree.build[Int, IntNode](xs.map(IntNode(_)))
+    val ordTree = OrderingTree.build[Int, IntNode](xs.map(IntNode(_)))
+    (xs, rbTree, ordTree)
   }
 
-  def testSet2 = {
+  def randomSet(size: Int = 1000) = {
     val rnd = new scala.util.Random(System.currentTimeMillis())
-    val xs = List.fill(1000000)(rnd.nextInt(1000000))
-    val tree = RBTree.build[Int, IntNode](xs.map(IntNode(_)))
-    (xs, tree)
+    val xs = List.fill(size)(rnd.nextInt(100000))
+    val rbTree = RBTree.build[Int, IntNode](xs.map(IntNode(_)))
+    val ordTree = OrderingTree.build[Int, IntNode](xs.map(IntNode(_)))
+    (xs, rbTree, ordTree)
   }
+
+  val detSet = determinedSet
+  val rndSet = randomSet(10000)
   
-  "Test Set 1" should behave like performPrimitiveOperations(testSet1)
-  it should behave like performComplexOperations(testSet1)
+  "Determined Set with Red Black Tree" should behave like performPrimitiveOperations(detSet._1, detSet._2)
+  it should behave like performComplexOperations(detSet._1, detSet._2)
+  it should behave like processOrderingStatistics(detSet._1, detSet._2)
+
+  "Random Set with Red Black Tree" should behave like performPrimitiveOperations(rndSet._1, rndSet._2)
+  it should behave like performComplexOperations(rndSet._1, rndSet._2)
+  it should behave like processOrderingStatistics(rndSet._1, rndSet._2)
   
-//  "Random Set" should behave like performPrimitiveOperations(testSet2)
-//  it should behave like performComplexOperations(testSet2)
+
+  "Determined Set with Ordering Tree" should behave like performPrimitiveOperations(detSet._1, detSet._3)
+  it should behave like performComplexOperations(detSet._1, detSet._3)
+  it should behave like processOrderingStatistics(detSet._1, detSet._3)
+
+  "Random Set with Ordering Tree" should behave like performPrimitiveOperations(rndSet._1, rndSet._3)
+  it should behave like performComplexOperations(rndSet._1, rndSet._3)
+  it should behave like processOrderingStatistics(rndSet._1, rndSet._3)
 }
