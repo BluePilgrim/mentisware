@@ -11,7 +11,7 @@ trait Node[T] {
   override def toString = key.toString
 }
 
-abstract class RBTree[+T, +Elem] {
+trait RBTree[+T, +Elem] {
   def elem: Elem
   def left: RBTree[T, Elem]
   def right: RBTree[T, Elem]
@@ -19,7 +19,12 @@ abstract class RBTree[+T, +Elem] {
   
   def predecessor: RBTree[T, Elem]
   def successor: RBTree[T, Elem]
-  def search[A >: T : Ordering](k: A): RBTree[T, Elem]
+  def search[A >: T : Ordering](k: A): RBTree[T, Elem] = {
+    if (k == key) this
+    else if (k < key) left.search(k)
+    else right.search(k)
+  }
+
   def minimum: Option[Elem]
   def maximum: Option[Elem]
   def insert[B >: Elem](n: B): RBTree[T, B]
@@ -27,7 +32,9 @@ abstract class RBTree[+T, +Elem] {
 
   def color: Color
   def isEmpty(): Boolean
-  
+
+  def keyList(): List[T] = left.keyList ::: key :: right.keyList
+    
   def validateRBProperty() {
     // A Red Black Tree should satisfy the following properties.
     // 1. Every node is either red or black
@@ -73,7 +80,7 @@ case object NilTree extends RBTree[Nothing, Nothing] {
   
   def predecessor = error("NilTree.predecessor")
   def successor = error("NilTree.successor")
-  def search[A >: Nothing : Ordering](k: A) = this
+  override def search[A >: Nothing : Ordering](k: A) = this
   def minimum = None
   def maximum = None
   def insert[B >: Nothing](n: B) = error("NilTree.insert")
@@ -92,43 +99,40 @@ case class NormalTree[T : Ordering, E <: Node[T]](
   def key = elem.key
 
   /* internal utility methods */  
-  private def findMaximum(node: RBTree[T, E]): RBTree[T, E] = node match {
+  private def findMaximum(): RBTree[T, E] = right match {
     case NilTree => this
-    case _ => if (node.right.isEmpty) node else findMaximum(node.right)
+    case node: NormalTree[T, E] => node.findMaximum()
   }
 
-  private def findMinimum(node: RBTree[T, E]): RBTree[T, E] = node match {
+  private def findMinimum(): RBTree[T, E] = left match {
     case NilTree => this
-    case _ => if (node.left.isEmpty) node else findMinimum(node.left)
+    case node: NormalTree[T, E] => node.findMinimum()
   }
 
   
   def extractElem[B >: E](n: B): E = n match {
       case x: E => x
-      case _ => error("[insert] unsupported data")
+      case _ => error("[Normal Tree] unsupported data")
   }
 
-  def predecessor = findMaximum(left)
+  def predecessor = left match {
+    case NilTree => NilTree
+    case node: NormalTree[T, E] => node.findMaximum()
+  }
   
-  def successor = findMinimum(right)
+  def successor = right match {
+    case NilTree => NilTree
+    case node: NormalTree[T, E] => node.findMinimum()
+  }
   
-  def minimum = findMinimum(this) match {
+  def minimum = findMinimum() match {
     case NilTree => None
     case node: NormalTree[_, _] => Some(node.elem)
   }
   
-  def maximum = findMaximum(this) match {
+  def maximum = findMaximum() match {
     case NilTree => None
     case node: NormalTree[_, _] => Some(node.elem)
-  }
-  
-  def search[A >: T : Ordering](k: A) = {
-    def _search(node: RBTree[T, E]): RBTree[T, E] =
-      if (k < node.key) _search(node.left)
-      else if (k > node.key) _search(node.right)
-      else node
-      
-    _search(this)
   }
 
 /*
@@ -192,114 +196,114 @@ case class NormalTree[T : Ordering, E <: Node[T]](
   }
 */
 
+  private def checkRedConflict(node: RBTree[T, E]): Int = {
+    // check if one of its child is also RED in case of a RED node
+    // I define a stale state as requiring some fix should be done via some rotation,
+    // and a stable state as the fixation has been done.
+    // At stale state
+    //     the newly inserted node set the flag 1
+    //     the parent calls "checkRedConflict" and set the flag as follows
+    //         . no conflict or its color is black) : 0 while exiting the state state
+    //         . left child is Red : 2
+    //         . right child is Red : 3
+    //
+    if (node.color == Red) {
+      assert(!(node.left.color == Red && node.right.color == Red))
+      if (node.left.color == Red) 2
+      else if (node.right.color == Red) 3
+      else 0
+    } else 0
+  }
+
+  private def resolveRedConflict(
+      node: RBTree[T, E],
+      conflictFlag: Int,
+      isLeftChild: Boolean): (RBTree[T, E], Int) = {
+    assert(node.color == Black)
+
+    if (isLeftChild) {
+      conflictFlag match {
+        case 2 =>    // there is red conflict between left child and the left grandchild
+          if (node.right.color == Red) {
+            // set both children to Black while this node to Red
+            val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
+            val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)
+            (NormalTree(node.elem, newLeft, newRight, Red), 1)  // now stale
+          } else {
+            // right rotate on this node and set the original red child black while this node red
+//              val a = node.left.left.left
+//              val b = node.left.left.right
+            val c = node.left.right
+            val d = node.right
+            
+            val newRight= NormalTree(node.elem, c, d, Red)
+            (NormalTree(node.left.elem, node.left.left, newRight, Black), 0)  // now stable
+          }
+        case 3 =>    // there is red conflict between left child and the right grandchild
+          if (node.right.color == Red) {
+            // set both children to Black while this node to Red
+            val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
+            val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)                
+            (NormalTree(node.elem, newLeft, newRight, Red), 1)
+          } else {
+            // the grandchild is set to the new node and this node becomes the right child
+            val a = node.left.left
+            val b = node.left.right.left
+            val c = node.left.right.right
+            val d = node.right
+            
+            val newLeft = NormalTree(node.left.elem, a, b, Red)
+            val newRight = NormalTree(node.elem, c, d, Red)
+            (NormalTree(node.left.right.elem, newLeft, newRight, Black), 0)
+          }
+        case _ => error("Strange conflict flag")
+      }
+    } else {
+      conflictFlag match {
+        case 2 =>    // there is red conflict between right child and the left grandchild
+          assert(node.color == Black)
+          if (node.left.color == Red) {
+            // set both children to Black while this node to Red
+            val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
+            val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)
+            (NormalTree(node.elem, newLeft, newRight, Red), 1)  // now stale
+          } else {
+            // the grandchild is set to the new node and this node becomes the left child
+            val a = node.left
+            val b = node.right.left.left
+            val c = node.right.left.right
+            val d = node.right.right
+            
+            val newLeft = NormalTree(node.elem, a, b, Red)
+            val newRight = NormalTree(node.right.elem, c, d, Red)
+            (NormalTree(node.right.left.elem, newLeft, newRight, Black), 0)
+          }
+        case 3 =>    // there is red conflict between right child and the right grandchild
+          if (node.left.color == Red) {
+            // set both children to Black while this node to Red
+            val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
+            val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)                
+            (NormalTree(node.elem, newLeft, newRight, Red), 1)
+          } else {
+            // left rotate on this node and set the original red child black while this node red
+            val a = node.left
+            val b = node.right.left
+//              val c = node.right.right.left
+//              val d = node.right.right.right
+            
+            val newLeft = NormalTree(node.elem, a, b, Red)
+            (NormalTree(node.right.elem, newLeft, node.right.right, Black), 0)  // now stable
+          }
+        case _ => error("Strange conflict flag")
+      }
+    }
+  }
+
   def insert[B >: E](n: B): RBTree[T, B] = {
     val data = extractElem(n)
     val k = data.key
 
     require(this.color == Black)    // for implementation convenience, I follow CLR's RB Tree definition.
-    
-    def checkRedConflict(node: RBTree[T, E]): Int = {
-      // check if one of its child is also RED in case of a RED node
-      // I define a stale state as requiring some fix should be done via some rotation,
-      // and a stable state as the fixation has been done.
-      // At stale state
-      //     the newly inserted node set the flag 1
-      //     the parent calls "checkRedConflict" and set the flag as follows
-      //         . no conflict or its color is black) : 0 while exiting the state state
-      //         . left child is Red : 2
-      //         . right child is Red : 3
-      //
-      if (node.color == Red) {
-        assert(!(node.left.color == Red && node.right.color == Red))
-        if (node.left.color == Red) 2
-        else if (node.right.color == Red) 3
-        else 0
-      } else 0
-    }
-    
-    def resolveRedConflict(
-        node: RBTree[T, E],
-        conflictFlag: Int,
-        isLeftChild: Boolean): (RBTree[T, E], Int) = {
-      assert(node.color == Black)
-
-      if (isLeftChild) {
-        conflictFlag match {
-          case 2 =>    // there is red conflict between left child and the left grandchild
-            if (node.right.color == Red) {
-              // set both children to Black while this node to Red
-              val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
-              val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)
-              (NormalTree(node.elem, newLeft, newRight, Red), 1)  // now stale
-            } else {
-              // right rotate on this node and set the original red child black while this node red
-//              val a = node.left.left.left
-//              val b = node.left.left.right
-              val c = node.left.right
-              val d = node.right
-              
-              val newRight= NormalTree(node.elem, c, d, Red)
-              (NormalTree(node.left.elem, node.left.left, newRight, Black), 0)  // now stable
-            }
-          case 3 =>    // there is red conflict between left child and the right grandchild
-            if (node.right.color == Red) {
-              // set both children to Black while this node to Red
-              val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
-              val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)                
-              (NormalTree(node.elem, newLeft, newRight, Red), 1)
-            } else {
-              // the grandchild is set to the new node and this node becomes the right child
-              val a = node.left.left
-              val b = node.left.right.left
-              val c = node.left.right.right
-              val d = node.right
-              
-              val newLeft = NormalTree(node.left.elem, a, b, Red)
-              val newRight = NormalTree(node.elem, c, d, Red)
-              (NormalTree(node.left.right.elem, newLeft, newRight, Black), 0)
-            }
-          case _ => error("Strange conflict flag")
-        }
-      } else {
-        conflictFlag match {
-          case 2 =>    // there is red conflict between right child and the left grandchild
-            assert(node.color == Black)
-            if (node.left.color == Red) {
-              // set both children to Black while this node to Red
-              val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
-              val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)
-              (NormalTree(node.elem, newLeft, newRight, Red), 1)  // now stale
-            } else {
-              // the grandchild is set to the new node and this node becomes the left child
-              val a = node.left
-              val b = node.right.left.left
-              val c = node.right.left.right
-              val d = node.right.right
-              
-              val newLeft = NormalTree(node.elem, a, b, Red)
-              val newRight = NormalTree(node.right.elem, c, d, Red)
-              (NormalTree(node.right.left.elem, newLeft, newRight, Black), 0)
-            }
-          case 3 =>    // there is red conflict between right child and the right grandchild
-            if (node.left.color == Red) {
-              // set both children to Black while this node to Red
-              val newLeft = NormalTree(node.left.elem, node.left.left, node.left.right, Black)
-              val newRight = NormalTree(node.right.elem, node.right.left, node.right.right, Black)                
-              (NormalTree(node.elem, newLeft, newRight, Red), 1)
-            } else {
-              // left rotate on this node and set the original red child black while this node red
-              val a = node.left
-              val b = node.right.left
-//              val c = node.right.right.left
-//              val d = node.right.right.right
-              
-              val newLeft = NormalTree(node.elem, a, b, Red)
-              (NormalTree(node.right.elem, newLeft, node.right.right, Black), 0)  // now stable
-            }
-          case _ => error("Strange conflict flag")
-        }
-      }
-    }
     
     def _insert(node: RBTree[T, E]): (RBTree[T, E], Int) = {
       if (k < node.key) {
@@ -311,7 +315,7 @@ case class NormalTree[T : Ordering, E <: Node[T]](
           val (newLeft, conflictFlag) = _insert(node.left)
           val newNode = NormalTree(node.elem, newLeft, node.right, node.color)
           conflictFlag match {
-            case 0 =>      // no color fixation is required.
+            case 0 =>      // no color fixation is further required.
               (newNode, 0)
             case 1 =>      // in stale mode, check is required.
               (newNode, checkRedConflict(newNode))
@@ -345,101 +349,102 @@ case class NormalTree[T : Ordering, E <: Node[T]](
     if (root.color == Red) NormalTree(root.elem, root.left, root.right, Black) else root
   }
 
+
+  def resolveBlackConflict(node: RBTree[T, E], isLeftChild: Boolean): (RBTree[T, E], Boolean) = {
+    if (isLeftChild) {
+      require(node.left.color == Black)
+      val x = node.left
+      val p = node
+      val s = node.right
+      val y = s.left
+      val z = s.right
+      
+      s.color match {
+        case Black if z.color == Red =>
+          val newP = NormalTree(p.elem, x, y, Black)
+          val newZ = NormalTree(z.elem, z.left, z.right, Black)
+          (NormalTree(s.elem, newP, newZ, p.color), false)
+          
+        case Black if y.color == Red =>
+          val newP = NormalTree(p.elem, x, y.left, Black)
+          val newS = NormalTree(s.elem, y.right, z, Black)
+          (NormalTree(y.elem, newP, newS, p.color), false)
+          
+        case Black =>
+          val newS = NormalTree(s.elem, y, z, Red)
+          (NormalTree(p.elem, x, newS, Black), p.color == Black)
+          
+        case Red =>
+          val a = y.left
+          val b = y.right
+          if (b.color == Red) {
+            val newB = NormalTree(b.elem, b.left, b.right, Black)
+            val newP = NormalTree(p.elem, x, a, Black)
+            val newY = NormalTree(y.elem, newP, newB, Red)
+            (NormalTree(s.elem, newY, z, Black), false)
+          } else if (a.color == Red) {
+            val newP = NormalTree(p.elem, x, a.left, Black)
+            val newY = NormalTree(y.elem, a.right, b, Black)
+            val newA = NormalTree(a.elem, newP, newY, Red)
+            (NormalTree(s.elem, newA, z, Black), false)
+          } else {
+            val newY = NormalTree(y.elem, a, b, Red)
+            val newP = NormalTree(p.elem, x, newY, Black)
+            (NormalTree(s.elem, newP, z, Black), false)
+          }
+      }
+    } else {
+      require(node.right.color == Black)
+
+      val p = node
+      val x = node.right
+      val s = node.left
+      val y = s.left
+      val z = s.right
+      
+      s.color match {
+        case Black if y.color == Red =>
+          val newP = NormalTree(p.elem, z, x, Black)
+          val newY = NormalTree(y.elem, y.left, y.right, Black)
+          (NormalTree(s.elem, newY, newP, p.color), false)
+          
+        case Black if z.color == Red =>
+          val newP = NormalTree(p.elem, z.right, x, Black)
+          val newS = NormalTree(s.elem, y, z.left, Black)
+          (NormalTree(z.elem, newS, newP, p.color), false)
+          
+        case Black =>
+          val newS = NormalTree(s.elem, y, z, Red)
+          (NormalTree(p.elem, newS, x, Black), p.color == Black)
+          
+        case Red =>
+          val a = z.left
+          val b = z.right
+          if (a.color == Red) {
+            val newA = NormalTree(a.elem, a.left, a.right, Black)
+            val newP = NormalTree(p.elem, b, x, Black)
+            val newZ = NormalTree(z.elem, newA, newP, Red)
+            (NormalTree(s.elem, y, newZ, Black), false)
+          } else if (b.color == Red) {
+            val newP = NormalTree(p.elem, b.right, x, Black)
+            val newZ = NormalTree(z.elem, a, b.left, Black)
+            val newB = NormalTree(b.elem, newZ, newP, Red)
+            (NormalTree(s.elem, y, newB, Black), false)
+          } else {
+            val newZ = NormalTree(z.elem, a, b, Red)
+            val newP = NormalTree(p.elem, newZ, x, Black)
+            (NormalTree(s.elem, y, newP, Black), false)
+          }
+      }
+    }
+  }
+
   def delete[B >: E](n: B): RBTree[T, B] = {
     val data = extractElem(n)
     val k = data.key
     
     require(this.color == Black)
 
-    def resolveBlackConflict(node: RBTree[T, E], isLeftChild: Boolean): (RBTree[T, E], Boolean) = {
-      if (isLeftChild) {
-        require(node.left.color == Black)
-        val x = node.left
-        val p = node
-        val s = node.right
-        val y = s.left
-        val z = s.right
-        
-        s.color match {
-          case Black if z.color == Red =>
-            val newP = NormalTree(p.elem, x, y, Black)
-            val newZ = NormalTree(z.elem, z.left, z.right, Black)
-            (NormalTree(s.elem, newP, newZ, p.color), false)
-            
-          case Black if y.color == Red =>
-            val newP = NormalTree(p.elem, x, y.left, Black)
-            val newS = NormalTree(s.elem, y.right, z, Black)
-            (NormalTree(y.elem, newP, newS, p.color), false)
-            
-          case Black =>
-            val newS = NormalTree(s.elem, y, z, Red)
-            (NormalTree(p.elem, x, newS, Black), p.color == Black)
-            
-          case Red =>
-            val a = y.left
-            val b = y.right
-            if (b.color == Red) {
-              val newB = NormalTree(b.elem, b.left, b.right, Black)
-              val newP = NormalTree(p.elem, x, a, Black)
-              val newY = NormalTree(y.elem, newP, newB, Red)
-              (NormalTree(s.elem, newY, z, Black), false)
-            } else if (a.color == Red) {
-              val newP = NormalTree(p.elem, x, a.left, Black)
-              val newY = NormalTree(y.elem, a.right, b, Black)
-              val newA = NormalTree(a.elem, newP, newY, Red)
-              (NormalTree(s.elem, newA, z, Black), false)
-            } else {
-              val newY = NormalTree(y.elem, a, b, Red)
-              val newP = NormalTree(p.elem, x, newY, Black)
-              (NormalTree(s.elem, newP, z, Black), false)
-            }
-        }
-      } else {
-        require(node.right.color == Black)
-
-        val p = node
-        val x = node.right
-        val s = node.left
-        val y = s.left
-        val z = s.right
-        
-        s.color match {
-          case Black if y.color == Red =>
-            val newP = NormalTree(p.elem, z, x, Black)
-            val newY = NormalTree(y.elem, y.left, y.right, Black)
-            (NormalTree(s.elem, newY, newP, p.color), false)
-            
-          case Black if z.color == Red =>
-            val newP = NormalTree(p.elem, z.right, x, Black)
-            val newS = NormalTree(s.elem, y, z.left, Black)
-            (NormalTree(z.elem, newS, newP, p.color), false)
-            
-          case Black =>
-            val newS = NormalTree(s.elem, y, z, Red)
-            (NormalTree(p.elem, newS, x, Black), p.color == Black)
-            
-          case Red =>
-            val a = z.left
-            val b = z.right
-            if (a.color == Red) {
-              val newA = NormalTree(a.elem, a.left, a.right, Black)
-              val newP = NormalTree(p.elem, b, x, Black)
-              val newZ = NormalTree(z.elem, newA, newP, Red)
-              (NormalTree(s.elem, y, newZ, Black), false)
-            } else if (b.color == Red) {
-              val newP = NormalTree(p.elem, b.right, x, Black)
-              val newZ = NormalTree(z.elem, a, b.left, Black)
-              val newB = NormalTree(b.elem, newZ, newP, Red)
-              (NormalTree(s.elem, y, newB, Black), false)
-            } else {
-              val newZ = NormalTree(z.elem, a, b, Red)
-              val newP = NormalTree(p.elem, newZ, x, Black)
-              (NormalTree(s.elem, y, newP, Black), false)
-            }
-        }
-      }
-    }
-    
     def _delete(node: RBTree[T, E]): (RBTree[T, E], Boolean) = {
       if (k < node.key) {     // if the left is NilTree, exception will be raised.
         val (newLeft, isStale) = _delete(node.left)
