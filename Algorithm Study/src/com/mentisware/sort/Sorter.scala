@@ -199,12 +199,12 @@ object Sorter {
         if (start + 2 > end) {
           val mid = (start + end) / 2
           val (sVal, mVal, eVal) = (buf(start), buf(mid), buf(end))
-          
-          if (sVal.start > mVal.start && sVal.start > eVal.start) {
+
+          if (sVal.low > mVal.low && sVal.low > eVal.low) {
             //swap start with end
             buf(start) = eVal
             buf(end) = sVal
-          } else if (mVal.start > sVal.start && mVal.start > eVal.start) {
+          } else if (mVal.low > sVal.low && mVal.low > eVal.low) {
             // swap mid with end
             buf(mid) = eVal
             buf(end) = mVal
@@ -217,6 +217,8 @@ object Sorter {
       val pivot = buf(end)
       var lessArea = start - 1
       var cur = start
+      var overlapInterval = pivot
+      var overlapExist = true
       
       // there are four areas :
       //     (less than area (start to lessArea),
@@ -225,45 +227,57 @@ object Sorter {
       //      pivot (end))
       while (cur < end) {
         val cVal = buf(cur)
-        if (cVal.start < pivot.start) {
+        
+        if (overlapExist) {
+          overlapInterval.intersect(cVal) match {
+            case None => overlapExist = false
+            case Some(x) => overlapInterval = x
+          }
+        }
+        
+        if (cVal.low < pivot.low) {
           lessArea += 1
           buf(cur) = buf(lessArea)
           buf(lessArea) = cVal
         }
+        
         cur += 1
       }
       
       // put pivot into just right of less Area
-      lessArea += 1
-      buf(end) = buf(lessArea)
-      buf(lessArea) = pivot
+      buf(end) = buf(lessArea + 1)
+      buf(lessArea + 1) = pivot
 
       // now the layout is : (less area, pivot, great or equal area)
-      // collect overlapping elements around the pivot
+      // collect overlapping elements around the overlapping area
       // (separate less area, overlapping less area, pivot, overlapping greater area, greater area)
+      // There should be an intersection among overlapping intervals (IMPORTANT!!!)
       // `lessArea` is the pivot
-      var overlappingLess = lessArea
-      cur = lessArea - 1
-      while (cur >= start) {
-        val x = buf(cur)
-        if (pivot overlap x) {
-          buf(cur) = buf(overlappingLess)
-          buf(overlappingLess) = x
-          overlappingLess -= 1
+      var overlappingLess, overlappingGreater = lessArea + 1
+      if (overlapExist) {
+        cur = lessArea
+        while (cur >= start) {
+          val x = buf(cur)
+          assert(x.low < pivot.low)
+          if (overlapInterval overlap x) {
+            overlappingLess -= 1
+            buf(cur) = buf(overlappingLess)
+            buf(overlappingLess) = x
+          }
+          cur -= 1
         }
-        cur -= 1
-      }
-      
-      var overlappingGreater = lessArea
-      cur = lessArea + 1
-      while (cur <= end) {
-        val x = buf(cur)
-        if (pivot overlap x) {
-          buf(cur) = buf(overlappingGreater)
-          buf(overlappingGreater) = x
-          overlappingGreater += 1
+  
+        cur = lessArea + 2
+        while (cur <= end) {
+          val x = buf(cur)
+          assert(pivot.low <= x.low)
+          if (overlapInterval overlap x) {
+            overlappingGreater += 1
+            buf(cur) = buf(overlappingGreater)
+            buf(overlappingGreater) = x
+          }
+          cur += 1
         }
-        cur += 1
       }
       
       (overlappingLess, overlappingGreater)

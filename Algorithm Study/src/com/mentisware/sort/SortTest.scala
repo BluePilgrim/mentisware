@@ -66,26 +66,44 @@ class SortTest extends UnitSpec with SortBehaviors[Int] {
   def intervalSet2 = {
     val rnd = new scala.util.Random(System.currentTimeMillis())
     val xs  = new scala.collection.mutable.ListBuffer[Interval[Int]]
+
+//    val xs = List(Interval(438, 531), Interval(599, 647), Interval(899, 911),
+//        Interval(53, 152), Interval(996, 1045), Interval(37, 113),
+//        Interval(377, 424), Interval(533, 586), Interval(438, 503), Interval(361, 451))
     
+
     def createRandomIntervals(count: Int) {
-      val x = rnd.nextInt(1000) - 500
-      val y = rnd.nextInt(200)
-      Interval(x, y) +=: xs
+      if (count > 0) {
+        val x = rnd.nextInt(1000000)
+        val y = rnd.nextInt(100)
+        Interval(x, x + y) +=: xs
+
+//        Interval(100 - count * 20, (100 - count * 15) ) +=: xs
+        createRandomIntervals(count - 1)
+      }
     }
     
-    createRandomIntervals(300)
+    createRandomIntervals(100000)
+
+//    println("generated list\n" + xs)
+//    xs
     xs.toList
   }
 
   def verifySortedIntervals(sortedIntervals: List[Interval[Int]]): Boolean = {
-    def checkOrdering(xs: List[Interval[Int]], verifyResult: Boolean) : Boolean = xs match {
-      case Nil => verifyResult
-      case head :: Nil => verifyResult
+    def checkOrdering(xs: List[Interval[Int]]) : Boolean = xs match {
+      case Nil => true
+      case head :: Nil => true
       case head :: ys =>
-        verifyResult && checkOrdering(ys, head.start < ys.head.start || (head overlap ys.head))
+        val res = head.low <= ys.head.low || (head overlap ys.head)
+        if (!res) {
+          println("this = " + head + ", next = " + ys.head)
+        }
+        (head.low <= ys.head.low || (head overlap ys.head)) && checkOrdering(ys)
     }
-    
-    checkOrdering(sortedIntervals, true)
+//    println("sorted list\n" + sortedIntervals)
+
+    checkOrdering(sortedIntervals)
   }
 
   
