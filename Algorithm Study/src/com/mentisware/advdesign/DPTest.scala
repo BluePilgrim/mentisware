@@ -26,7 +26,7 @@ class DPTest extends UnitSpec with TestSet {
   }
   
   "Longest Palindrome" should "perform correctly for random string" in {
-    val randSet = randomSet(2000)
+    val randSet = randomSet(5000)
 //    println("str = " + randSet)
     (DP.getLongestPalindrome3(randSet).length) should equal (DP.getLongestPalindrome2(randSet).length)
     
