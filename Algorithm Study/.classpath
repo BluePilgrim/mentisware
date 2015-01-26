@@ -3,6 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
-	<classpathentry kind="lib" path="C:/Users/David/Programming/Workspace/3rd Party Libraries/scalatest_2.11-2.2.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/3rd Party Library"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
