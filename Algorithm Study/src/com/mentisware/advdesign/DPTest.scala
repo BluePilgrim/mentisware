@@ -3,13 +3,15 @@ package com.mentisware.advdesign
 import com.mentisware.test.UnitSpec
 
 trait TestSet {
-    def testSet1 = ("ABCBDAB", "BDCABA", 4)
-    def testSet2 = "character"
-    def testSet3 = "aa"
-    def randomSet(size: Int = 1000) = {
-      val rnd = new scala.util.Random(System.currentTimeMillis())
-      rnd.nextString(size)
-    }
+  def testSet1 = ("ABCBDAB", "BDCABA", 4)
+  def testSet2 = "character"
+  def testSet3 = "aa"
+  def randomSet(size: Int = 1000) = {
+    val rnd = new scala.util.Random(System.currentTimeMillis())
+    rnd.nextString(size)
+  }
+  
+  def testSet4 = (Vector(1, 20, 7, 9, 31, 15), 1234)
 }
 
 class DPTest extends UnitSpec with TestSet {
@@ -26,9 +28,13 @@ class DPTest extends UnitSpec with TestSet {
   }
   
   "Longest Palindrome" should "perform correctly for random string" in {
-    val randSet = randomSet(5000)
+    val randSet = randomSet(1000)
 //    println("str = " + randSet)
     (DP.getLongestPalindrome3(randSet).length) should equal (DP.getLongestPalindrome2(randSet).length)
     
+  }
+  
+  "Coin Change" should "count the minimum coins correctly" in {
+    (DP.changeCoins1(testSet4._1, testSet4._2)) should equal (DP.changeCoins2(testSet4._1, testSet4._2))
   }
 }

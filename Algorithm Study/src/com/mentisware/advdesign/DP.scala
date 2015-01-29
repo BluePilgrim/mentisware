@@ -3,6 +3,9 @@
  */
 package com.mentisware.advdesign
 
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.Map
+
 /**
  * @author David
  *
@@ -197,5 +200,89 @@ object DP {
     val palindrome = generateLP(0, n - 1, "")
     println("length = " + LPLen + " palindrome = " + palindrome)
     palindrome
+  }
+  
+  //
+  // change coins to minimize the number of coins
+  // use the dynamic programming
+  // C(v, i) = C(v, i-1) or (C(v-value(i), i) + 1)
+  // implement both top-down and bottom-up
+  def changeCoins1(coinVals: Vector[Int], amount: Int): Vector[Int] = {
+    // the matrix assumes that the index start from 1 and index 0 is used to handle corner cases
+    // base cases are
+    // C(0, i) = 0, C(x, 0) = max
+    val numOfCoins = scala.collection.mutable.ArrayBuffer.tabulate(amount+1, coinVals.length+1) {
+      (a, b) => if (b == 0) amount+1 else 0
+    }
+    
+    for (v <- 1 to amount; i <- 1 to coinVals.length) {
+      val c1 = numOfCoins(v)(i-1)
+      val c2 = if (v >= coinVals(i-1)) numOfCoins(v-coinVals(i-1))(i) + 1 else c1 + 1
+      numOfCoins(v)(i) = if (c1 > c2) c2 else c1
+    }
+    
+    // now, numOfCoins(amount)(coins.length) contains the optimal number
+    // By tracking numbers in the table, generate the number for each coin
+    val coins = ArrayBuffer.fill(coinVals.length)(0)
+    var i = coinVals.length
+    var v = amount
+    
+    while (i > 0 && v > 0) {
+      if (numOfCoins(v)(i) == numOfCoins(v)(i-1)) {
+        i -= 1
+//        println("i = " + i)
+      } else {
+        assert(v < coinVals(i-1) || numOfCoins(v)(i) == numOfCoins(v-coinVals(i-1))(i) + 1)
+        coins(i-1) += 1
+        v -= coinVals(i-1)
+//        println("v = " + v)
+      }
+    }
+    
+    println("minimum coin num = " + numOfCoins(amount)(coinVals.length))
+    println("coin count = " + coins.toVector)
+    coins.toVector
+  }
+  
+  def changeCoins2(coinVals: Vector[Int], amount: Int): Vector[Int] = {
+    val numOfCoins = Map[(Int, Int), Int]()
+    val coinCount = ArrayBuffer.fill(coinVals.length)(0)
+    
+    def getNumOfCoins(v: Int, i: Int): Int = {
+     if (numOfCoins.isDefinedAt((v, i))) numOfCoins((v, i))
+     else if (v == 0) {
+       numOfCoins += ((0, i) -> 0)
+       0
+     } else if (i < 0) {
+       numOfCoins += ((v, -1) -> (amount + 1))
+       amount + 1
+     } else {
+       val c1 = getNumOfCoins(v, i-1)
+       val c2 = if (v >= coinVals(i)) getNumOfCoins(v - coinVals(i), i) + 1 else c1 + 1
+       val num = if (c1 > c2) c2 else c1
+       numOfCoins += ((v, i) -> num)
+       num
+     }
+    }
+    
+    def generateCoinCount(v: Int, i: Int) {
+//      println("v = " + v + " i = " + i)
+      if (v > 0 && i >= 0) {
+        if (numOfCoins((v,i)) == numOfCoins((v,i-1))) {
+          generateCoinCount(v, i-1)
+        } else {
+          assert(v < coinVals(i) || numOfCoins((v,i)) == numOfCoins((v-coinVals(i),i)) + 1)
+          coinCount(i) += 1
+          generateCoinCount(v-coinVals(i), i)
+        }
+      }
+    }
+    
+    val coinNum = getNumOfCoins(amount, coinVals.length-1)
+    println("minimum coin num = " + coinNum)
+    
+    generateCoinCount(amount, coinVals.length-1)
+    println("coin count = " + coinCount.toVector)
+    coinCount.toVector
   }
 }
