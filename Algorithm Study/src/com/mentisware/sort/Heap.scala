@@ -80,7 +80,7 @@ class Heap[T : Ordering](data: List[T], isMaxHeap: Boolean = true) {
     }
   }
   
-  def getContents = arr.toList
+  def getContents = arr.toList.slice(0, size)
   def getLength = size
   
   rebuild(0)    // build a heap from the given list
