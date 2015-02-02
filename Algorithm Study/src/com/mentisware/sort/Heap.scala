@@ -63,7 +63,8 @@ class Heap[T : Ordering](data: List[T], isMaxHeap: Boolean = true) {
   }
 
   def add(x: T) {
-    arr += x
+    arr += x      // wrong!!!!
+    arr(size) = x
     updateWithParent(size)
     size += 1
   }
