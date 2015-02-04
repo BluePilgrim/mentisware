@@ -7,6 +7,21 @@ package com.mentisware.huffman
 sealed abstract class PrefixTree {
   val freq: Int
 
+  def decodeChar(encData: Int): (Char, Int) = {  // assume the encode data start from 31th bit (MSB order)
+    def traverseTree(node: PrefixTree, bitPos: Int, depth: Int): (Char, Int) = node match {
+      case x: LeafNode => (x.ch, depth)
+      case i: InternalNode =>
+        traverseTree(
+          if ((encData >>> bitPos & 0x1) == 0) i.left else i.right,
+          bitPos - 1,
+          depth + 1
+        )
+      case _ => assert(false); (' ', 0)
+    }
+    
+    traverseTree(this, 31, 0)
+  }
+  
   def getCodeTable: Map[Char, (Int, Int)] = {
     val codeTable = scala.collection.mutable.Map[Char, (Int, Int)]()
     
@@ -83,7 +98,6 @@ object PrefixTree {
     val freqTable = scala.collection.mutable.Map[Char, Int]().withDefault(x => 0)
     
     src foreach (freqTable(_) += 1)
-    src reset    // clean up for the future operations
     
     build(freqTable.toMap)
   }
