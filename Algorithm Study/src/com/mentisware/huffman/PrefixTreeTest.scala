@@ -13,16 +13,14 @@ class PrefixTreeTest extends UnitSpec with TestSet {
   "Prefix Tree" should "run the Huffman encoding for set 1" in {
     val freqTable = set2
     val prefixTree = PrefixTree.build(freqTable)
-    PrefixTree.printHuffmanCode(prefixTree)
+    println(prefixTree)
   }
   
   it should "read a text file and build a prefix tree" in {
     val src = scala.io.Source.fromFile(inputFile)
-    val freqTable = scala.collection.mutable.Map[Char, Int]().withDefault(x => 0)
+    val prefixTree = PrefixTree.build(src)
+    println(prefixTree)
     
-    src foreach (freqTable(_) += 1)
-    
-    val prefixTree = PrefixTree.build(freqTable.toMap)
-    PrefixTree.printHuffmanCode(prefixTree)
+    src.close()
   }
 }

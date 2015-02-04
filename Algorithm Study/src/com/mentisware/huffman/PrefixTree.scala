@@ -4,7 +4,45 @@ package com.mentisware.huffman
  * @author David Yang
  */
 
-sealed abstract class PrefixTree { val freq: Int }
+sealed abstract class PrefixTree {
+  val freq: Int
+
+  def getCodeTable: Map[Char, (Int, Int)] = {
+    val codeTable = scala.collection.mutable.Map[Char, (Int, Int)]()
+    
+    def calculateEncoding(node: PrefixTree, code: Int, len: Int): Unit = node match {
+      case x: LeafNode => codeTable(x.ch) = (code, len)
+      case i: InternalNode =>
+        calculateEncoding(i.left, code << 1, len + 1)
+        calculateEncoding(i.right, (code << 1) | 1, len + 1)
+      case _ => assert(false)
+    }
+    
+    calculateEncoding(this, 0, 0)
+    codeTable.toMap
+  }
+  
+  override def toString = {
+    val codeTable = getCodeTable
+    codeTable.view map {
+      case (ch, (code, codeLen)) => ch + " = " + f"$code%x" + " (" + codeLen + ")"
+    } mkString("", "\n", "")
+  }
+
+/*
+  def printHuffmanCode {
+    def printEncoding(node: PrefixTree, code: Int, len: Int): Unit = node match {
+      case x: LeafNode => println(x.ch + " = " + f"$code%x" + " (" + len + ")")
+      case i: InternalNode =>
+        printEncoding(i.left, code << 1, len + 1)
+        printEncoding(i.right, (code << 1) | 1, len + 1)
+      case _ => assert(false)
+    }
+    
+    printEncoding(this, 0, 0)
+  }
+*/
+}
 
 case class InternalNode(freq: Int, left: PrefixTree, right: PrefixTree) extends PrefixTree
 case class LeafNode(freq: Int, ch: Char) extends PrefixTree
@@ -41,16 +79,13 @@ object PrefixTree {
     }
   }
   
-  def printHuffmanCode(pTree: PrefixTree) {
-    def printEncoding(node: PrefixTree, code: Int, len: Int): Unit = node match {
-      case x: LeafNode => println(x.ch + " = " + f"$code%x" + " (" + len + ")")
-      case i: InternalNode =>
-        printEncoding(i.left, code << 1, len + 1)
-        printEncoding(i.right, (code << 1) | 1, len + 1)
-      case _ => assert(false)
-    }
+  def build(src: scala.io.Source): PrefixTree = {
+    val freqTable = scala.collection.mutable.Map[Char, Int]().withDefault(x => 0)
     
-    printEncoding(pTree, 0, 0)
+    src foreach (freqTable(_) += 1)
+    src reset    // clean up for the future operations
+    
+    build(freqTable.toMap)
   }
   
   implicit val ord = new Ordering[PrefixTree] {
