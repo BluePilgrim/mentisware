@@ -73,8 +73,6 @@ object HuffmanCoder {
         bitPos += 32
         encData = lookaheadData
       }
-
-      
     }
     
     // now i >= encSrc.length - 1
