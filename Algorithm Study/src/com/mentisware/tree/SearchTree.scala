@@ -1,24 +1,25 @@
 package com.mentisware.tree
 
 // base trait for node data
-trait Node[T] {
+abstract class Element[T] {
   def key: T
   override def toString = key.toString
 }
 
 // template for search tree
-trait SearchTree[T, E] {
-  def elem: E
-  def key: T
-  def children: Vector[SearchTree[T, E]]
-  def numOfChildren: Int
+trait SearchTree[T] {
+  def keys: Vector[T]
+  def numOfKeys = keys.length
+  def children: Vector[SearchTree[T]]
+  def numOfChildren = children.length
   
-  def search(k: T): SearchTree[T, E]
-  def minimum: Option[E]
-  def maximum: Option[E]
+  def apply(k: T): Element[T]
   
-  def insert(n: E): SearchTree[T, E]
-  def delete(n: E): SearchTree[T, E]
+  def minimum: Option[Element[T]]
+  def maximum: Option[Element[T]]
+  
+  def insert(e: Element[T]): SearchTree[T]
+  def delete(e: Element[T]): SearchTree[T]
   
   def isEmpty(): Boolean
   
