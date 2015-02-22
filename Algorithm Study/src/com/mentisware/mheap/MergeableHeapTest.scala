@@ -3,6 +3,7 @@ package com.mentisware.mheap
 import com.mentisware.test.UnitSpec
 import com.mentisware.sort.Sorter
 
+// don't use a case class with a var. It's malfunctioning with a map.
 class IntElem(var key: Int) extends Element[Int] {
   def updateKey(n: Int) { key = n }
 }
