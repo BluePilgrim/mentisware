@@ -83,13 +83,13 @@ sealed abstract class BTree[T: Ordering] extends SearchTree[T] {
       ((children.map(_.keyList) zip keys) :\ children(numOfKeys).keyList) ((x, y) => x._1 ::: x._2 :: y)
 
       
-  def validateBTree() {
+  def validate() {
     // A B Tree should satisfy the following properties.
     // 1. Every node have children of the same type
     // 2. The root & a leaf may contain 4t -1 keys
     // 3. An internal node may have t-1 to 2t-1 keys and # of children should be +1
     
-    def validate(node: BTree[T]) {
+    def validateNode(node: BTree[T]) {
       node match {
         case BTreeRoot(e, c, leaf, _) =>
           if (leaf) {
@@ -97,19 +97,19 @@ sealed abstract class BTree[T: Ordering] extends SearchTree[T] {
           } else {
             assert(e.length + 1 == c.length)
             for (i <- 1 until c.length) assert(c(0).isLeaf == c(i).isLeaf, println("c(0) = " + c(0) + "\nc" + "(" + i + ") = " + c(i)))
-            for (i <- 0 until c.length) validate(c(i))
+            for (i <- 0 until c.length) validateNode(c(i))
           }
         case BTreeInternal(e, c, _) =>
           assert(e.length >= t - 1 && e.length <= 2 * t - 1)
           assert(e.length + 1 == c.length)
           for (i <- 1 until c.length) assert(c(0).isLeaf == c(i).isLeaf, println("c(0) = " + c(0) + "\nc" + "(" + i + ") = " + c(i)))
-          for (i <- 0 until c.length) validate(c(i))
+          for (i <- 0 until c.length) validateNode(c(i))
         case BTreeLeaf(e, _) =>
           assert(e.length >= 2 * t - 1 && e.length <= 4 * t - 1)
       }
     }
     
-    validate(this)
+    validateNode(this)
   }
 
   def insert(e: Element[T]): BTree[T]
@@ -403,6 +403,10 @@ case class BTreeInternal[T : Ordering](
   }
   
   def delete(e: Element[T]): BTree[T] = {
+//    require(!mergeable)
+    // temporarily, mergeOrStuff may remove one key to its child, resulting in the node mergeable.
+    // But, it is sure to be safe, because the target child node has been already stuffed.
+    // The target will not borrow any key from this node.
     val (idx, found) = findIndex(e.key)
     
     if (found) {

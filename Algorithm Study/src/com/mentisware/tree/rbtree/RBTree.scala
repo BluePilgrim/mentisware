@@ -51,7 +51,7 @@ abstract class RBTree[T : Ordering] extends SearchTree[T] {
 
   def rankIn(mainTree: RBTree[T]): Int
 
-  def validateRBProperty() {
+  def validate() {
     // A Red Black Tree should satisfy the following properties.
     // 1. Every node is either red or black
     // 2. The root is black. (optional, but it is necessary for easy implementation
@@ -61,9 +61,9 @@ abstract class RBTree[T : Ordering] extends SearchTree[T] {
     
     if (color == Red) error("The root is red")
     
-    def validate(node: RBTree[T]): Int = {
-      val leftBH = if (node.left.isEmpty) 1 else validate(node.left)
-      val rightBH = if (node.right.isEmpty) 1 else validate(node.right)
+    def validateNode(node: RBTree[T]): Int = {
+      val leftBH = if (node.left.isEmpty) 1 else validateNode(node.left)
+      val rightBH = if (node.right.isEmpty) 1 else validateNode(node.right)
       
       if (leftBH != rightBH) error("Different BH at " + node + ": left BH = " + leftBH + " right BH = " + rightBH)
       
@@ -74,7 +74,7 @@ abstract class RBTree[T : Ordering] extends SearchTree[T] {
       } else leftBH + 1
     }
     
-    val treeBH = validate(this)
+    val treeBH = validateNode(this)
 //    println("tree BH = " + treeBH)
   }
 

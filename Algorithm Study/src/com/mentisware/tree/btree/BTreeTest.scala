@@ -12,7 +12,6 @@ trait BTreeBehavior { this: UnitSpec =>
   def performPrimitiveOperations(xs: List[Int], minDegree: Int) {
     val es = xs.map(IntElem(_))
     val tree = BTree.build(es, minDegree)
-    tree.validateBTree()    
     
     it should "return the minimum number" in {
       (tree.minimum) should equal (Some(IntElem(Orderer.selectSmallest(xs, 1))))
@@ -27,11 +26,12 @@ trait BTreeBehavior { this: UnitSpec =>
 //      val result = (tree /: es) { (t, e) =>
 //        val tr = t.delete(e)
 //        println("after delete " + e)
-//        tr.validateBTree()
+//        tr.validate()
 //        tr}
       
 //      println("es = " + es)
 //      println("key list = " + result.keyList)
+      result.validate()
       (result.isEmpty()) should equal (true)
     }
   }
@@ -39,22 +39,32 @@ trait BTreeBehavior { this: UnitSpec =>
   def performComplexOperations(xs: List[Int], minDegree: Int) {
     val es = xs.map(IntElem(_))
     val len = xs.length
-    val tree = BTree.build(es, minDegree)
-    tree.validateBTree()
-    
-    var t = tree
+    var btree = BTree.build(es, minDegree)
+    var rbtree = RBTree.build(es)
 
     it should "delete a half of elements" in {
       for (i <- 0 until len by 2) {
-        t = t.delete(es(i))
-//        println("delete " + es(i))
-        t.validateBTree()
+        btree = btree.delete(es(i))
+        rbtree = rbtree.delete(es(i))
       }
+    }
+    
+    btree.validate()
+    rbtree.validate()
+
+    it should "return the same result as Red Black Tree" in {
+      (btree.minimum) should equal (rbtree.minimum)
+      (btree.maximum) should equal (rbtree.maximum)
     }
 
     it should "add a half of the deleted elements in reverse order" in {
-      for (i <- (0 until len/2 by 2).reverse) t = t.insert(es(i))
+      for (i <- (0 until len/2 by 2).reverse) {
+        btree = btree.insert(es(i))
+        rbtree = rbtree.insert(es(i))
+      }
     }
+    btree.validate()
+    btree.validate()
   }
 }
 

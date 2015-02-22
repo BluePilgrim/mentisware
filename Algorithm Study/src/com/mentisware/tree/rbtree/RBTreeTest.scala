@@ -22,17 +22,17 @@ trait RBTreeBehavior { this: UnitSpec =>
     }
     
     it should "pass the RB property validation after insert" in {
-      tree.validateRBProperty()
+      tree.validate()
     }
 
     it should "pass the RB property validation after delete" in {
-      tree.delete(es.head).delete(es.tail.head).validateRBProperty()
+      tree.delete(es.head).delete(es.tail.head).validate()
     }
     
     it should "return NilTree after deletion of all elements" in {
       val result = (tree /: es) { (t, e) =>
 //        println("Delete " + e.key + " from\n" + t)
-        t.validateRBProperty()
+        t.validate()
         t.delete(e)
       }
  
@@ -48,12 +48,12 @@ trait RBTreeBehavior { this: UnitSpec =>
 
     it should "delete a half of elements" in {
       for (i <- 0 until len by 2) t = t.delete(es(i))
-      t.validateRBProperty()
+      t.validate()
     }
 
     it should "add a half of the deleted elements in reverse order" in {
       for (i <- (0 until len/2 by 2).reverse) t = t.insert(es(i))
-      t.validateRBProperty()
+      t.validate()
     }
   }
   

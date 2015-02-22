@@ -26,4 +26,5 @@ trait SearchTree[T] {
   def keyList: List[T]
   
   def error(m: String) = throw new NoSuchElementException(m)
+  def validate()
 }
