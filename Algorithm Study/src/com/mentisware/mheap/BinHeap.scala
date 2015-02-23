@@ -14,8 +14,8 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
   def getSize() = size
   
   val compare =
-    if (b) { (x: Element[T], y: Element[T]) => x.key <= y.key }
-    else { (x: Element[T], y: Element[T]) => x.key >= y.key }
+    if (b) { (x: Element[T], y: Element[T]) => x.key < y.key }
+    else { (x: Element[T], y: Element[T]) => x.key > y.key }
   val isMinHeap = b
   
   def insert(e: Element[T]) {
@@ -83,9 +83,10 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
       
     // check the mergeable heap property
     for (i <- size-1 until 0 by -1 )
-      if (!compare(heapData(parent(i)), heapData(i)))
+      if (!compare(heapData(parent(i)), heapData(i)) &&
+          heapData(parent(i)).key != heapData(i).key)
         error("mergeable heap property broken at i = " + i + "("+ heapData(i) + "), p = " +
-            parent(i) + "(" + heapData(parent(i)))
+            parent(i) + "(" + heapData(parent(i)) + ")")
   }
   
   
