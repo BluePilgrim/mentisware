@@ -2,7 +2,6 @@ package com.mentisware.mheap
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
-import Ordering.Implicits._
 
 class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extends MergeableHeap[T] {
   private val heapData: ArrayBuffer[Element[T]] = src.to[ArrayBuffer]
@@ -12,10 +11,7 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
   
   def isEmpty = size == 0
   def getSize() = size
-  
-  val lessThan =
-    if (b) { (x: Element[T], y: Element[T]) => x.key < y.key }
-    else { (x: Element[T], y: Element[T]) => x.key > y.key }
+
   val isMinHeap = b
   
   def insert(e: Element[T]) {
@@ -52,7 +48,7 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
 
   // decrease for min heap and increase for max heap
   def updateKey(e: Element[T], k: T) {
-    if (isMinHeap && k < e.key || !isMinHeap && k > e.key) {
+    if (lessThan(k, e)) {
       indexMap.remove(e) match {
         case Some(i) =>
           e.updateKey(k)

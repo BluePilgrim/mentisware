@@ -1,6 +1,5 @@
 package com.mentisware.mheap
 
-
 // for mergeable heap, the element should have a referenced to a corresponding satellite data.
 // it is recommended that Element is extended to have such pointers.
 abstract class Element[T: Ordering] {
@@ -11,7 +10,9 @@ abstract class Element[T: Ordering] {
 
 // The representative interface for mergeable heap types.
 // This time, they are mutable.
-trait MergeableHeap[T] {
+abstract class MergeableHeap[T: Ordering] {
+  import Ordering.Implicits._
+  
   def isMinHeap: Boolean                 // true for min heap, false for max heap
   def isEmpty: Boolean
   def getSize(): Int
@@ -25,4 +26,7 @@ trait MergeableHeap[T] {
   
   def error(m: String) = throw new NoSuchElementException(m)
   def validate()
+  
+  val lessThan = if (isMinHeap) { (x: T, y: T) => x < y } else { (x: T, y: T) => x > y}
+  implicit def elem2key(e: Element[T]): T = e.key
 }
