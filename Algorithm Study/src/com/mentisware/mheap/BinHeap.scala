@@ -2,6 +2,7 @@ package com.mentisware.mheap
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map
+import Ordering.Implicits._
 
 class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extends MergeableHeap[T] {
   private val heapData: ArrayBuffer[Element[T]] = src.to[ArrayBuffer]
@@ -13,7 +14,9 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
   def getSize() = size
 
   val isMinHeap = b
-  
+
+  val lessThan = if (b) { (x: T, y: T) => x < y } else { (x: T, y: T) => x > y}
+
   def insert(e: Element[T]) {
     if (heapData.length > size)
       heapData(size) = e

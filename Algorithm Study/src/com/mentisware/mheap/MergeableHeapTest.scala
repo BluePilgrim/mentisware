@@ -43,7 +43,9 @@ trait MergeableHeapBehavior { this: UnitSpec =>
     it should "be empty after n extract operations" in {
       for (i <- 0 until es.size) {
         (minHeap.extractHead()) should not equal (None)
+        minHeap.validate()
         (maxHeap.extractHead()) should not equal (None)
+        maxHeap.validate()
       }
       
       (minHeap.getSize()) should equal (0)
