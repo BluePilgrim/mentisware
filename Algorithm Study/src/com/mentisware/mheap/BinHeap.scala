@@ -13,7 +13,7 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
   def isEmpty = size == 0
   def getSize() = size
   
-  val compare =
+  val lessThan =
     if (b) { (x: Element[T], y: Element[T]) => x.key < y.key }
     else { (x: Element[T], y: Element[T]) => x.key > y.key }
   val isMinHeap = b
@@ -83,7 +83,7 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
       
     // check the mergeable heap property
     for (i <- size-1 until 0 by -1 )
-      if (!compare(heapData(parent(i)), heapData(i)) &&
+      if (!lessThan(heapData(parent(i)), heapData(i)) &&
           heapData(parent(i)).key != heapData(i).key)
         error("mergeable heap property broken at i = " + i + "("+ heapData(i) + "), p = " +
             parent(i) + "(" + heapData(parent(i)) + ")")
@@ -105,11 +105,11 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
     val s =
       if (l < size) {
         if (r < size) {
-          if (compare(heapData(l), heapData(r)))
-            if (compare(heapData(l), heapData(i))) l else i
+          if (lessThan(heapData(l), heapData(r)))
+            if (lessThan(heapData(l), heapData(i))) l else i
           else
-            if (compare(heapData(r), heapData(i))) r else i
-        } else if (compare(heapData(l), heapData(i))) l else i
+            if (lessThan(heapData(r), heapData(i))) r else i
+        } else if (lessThan(heapData(l), heapData(i))) l else i
       } else i    // both l and r are out of bounds      
       
     if (i != s) {
@@ -130,7 +130,7 @@ class BinHeap[T: Ordering](src: Seq[Element[T]] = Nil, b: Boolean = true) extend
       val p = parent(i)
       val e = heapData(i)
   
-      if (compare(e, heapData(p))) {
+      if (lessThan(e, heapData(p))) {
         heapData(i) = heapData(p)
         heapData(p) = e
         
