@@ -4,7 +4,7 @@ package com.mentisware.mheap
 // it is recommended that Element is extended to have such pointers.
 abstract class Element[T: Ordering] {
   def key: T
-  def updateKey(k: T)
+  def updateKey(k: T): T
   override def toString = key.toString
 }
 
