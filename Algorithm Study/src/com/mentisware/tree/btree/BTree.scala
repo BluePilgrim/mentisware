@@ -479,7 +479,7 @@ case class BTreeLeaf[T: Ordering](elems: Vector[Element[T]], t: Int) extends BTr
 
 
 object BTree {
-  def build[T : Ordering](xs: List[Element[T]], t: Int): BTree[T] = {
+  def build[T : Ordering](t: Int)(xs: Seq[Element[T]]): BTree[T] = {
     val emptyTree: BTree[T] = BTreeRoot[T](Vector[Element[T]](), Vector[BTree[T]](), true, t)
     (emptyTree /: xs) { _.insert(_) }
   }

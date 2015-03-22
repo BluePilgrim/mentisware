@@ -98,6 +98,7 @@ class NilTree[T : Ordering] extends RBTree[T] {
   override def search(k: T) = this
 
   def rankIn(mainTree: RBTree[T]) = error("NilTree.rankIn")
+  override def keyList = Nil
   
   def minimum = None
   def maximum = None
@@ -539,7 +540,7 @@ class NormalTree[T : Ordering](
 
 
 object RBTree {
-  def build[T : Ordering](xs: List[Element[T]]): RBTree[T] = {
+  def build[T : Ordering](xs: Seq[Element[T]]): RBTree[T] = {
     val nil = new NilTree[T]
     if (xs.length == 0) nil
     else {

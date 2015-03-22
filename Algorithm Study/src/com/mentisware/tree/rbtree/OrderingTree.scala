@@ -15,7 +15,7 @@ class OrderingTree[T : Ordering](
 
 
 object OrderingTree {
-  def build[T : Ordering](xs: List[Element[T]]): RBTree[T] = {
+  def build[T : Ordering](xs: Seq[Element[T]]): RBTree[T] = {
     val nil = new NilTree[T]
     if (xs.length == 0) nil
     else {

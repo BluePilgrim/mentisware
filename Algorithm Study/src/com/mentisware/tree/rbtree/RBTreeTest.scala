@@ -1,65 +1,17 @@
 package com.mentisware.tree.rbtree
 
 import com.mentisware.tree._
-
-import com.mentisware.test.UnitSpec
 import com.mentisware.sort.Orderer
+import com.mentisware.test.UnitSpec
 
 case class IntElem (key: Int) extends Element[Int]
 
 
-trait RBTreeBehavior { this: UnitSpec =>
-  def performPrimitiveOperations(xs: List[Int], tree: RBTree[Int]) {
-    val es = xs.map(IntElem(_))
-    
-    
-    it should "return the minimum number" in {
-      (tree.minimum) should equal (Some(IntElem(Orderer.selectSmallest(xs, 1))))
-    }
-    
-    it should "return the maximum number" in {
-      (tree.maximum) should equal (Some(IntElem(Orderer.selectSmallest(xs, xs.length))))
-    }
-    
-    it should "pass the RB property validation after insert" in {
-      tree.validate()
-    }
-
-    it should "pass the RB property validation after delete" in {
-      tree.delete(es.head).delete(es.tail.head).validate()
-    }
-    
-    it should "return NilTree after deletion of all elements" in {
-      val result = (tree /: es) { (t, e) =>
-//        println("Delete " + e.key + " from\n" + t)
-        t.validate()
-        t.delete(e)
-      }
- 
-      (result.isEmpty()) should equal (true)
-    }
-  }
-  
-  def performComplexOperations(xs: List[Int], tree: RBTree[Int]) {
+trait RBTreeBehavior extends SearchTreeBehavior { this: UnitSpec =>
+  def processOrderingStatistics(xs: List[Int])(buildTree: Seq[Element[Int]] => RBTree[Int]) {
     val es = xs.map(IntElem(_))
     val len = xs.length
-
-    var t = tree
-
-    it should "delete a half of elements" in {
-      for (i <- 0 until len by 2) t = t.delete(es(i))
-      t.validate()
-    }
-
-    it should "add a half of the deleted elements in reverse order" in {
-      for (i <- (0 until len/2 by 2).reverse) t = t.insert(es(i))
-      t.validate()
-    }
-  }
-  
-  def processOrderingStatistics(xs: List[Int], tree: RBTree[Int]) {
-    val es = xs.map(IntElem(_))
-    val len = xs.length
+    val tree = buildTree(es)
     val rnd = new scala.util.Random(System.currentTimeMillis())
     
     it should "select random orders correctly" in {
@@ -82,46 +34,34 @@ trait RBTreeBehavior { this: UnitSpec =>
   } 
 }
 
-
-class RBTreeTest extends UnitSpec with RBTreeBehavior {
-  def determinedSet = {
-
-    val xs = List(3, 11, 10, -1, -45, 2, -4, 7, -5, 9, 1, 100, 2, 4, -100, 98, 46)
-    
-    (xs,
-    RBTree.build[Int](xs.map(IntElem(_))),
-    OrderingTree.build[Int](xs.map(IntElem(_)))
-    )
-  }
+trait RBTestSet {
+  def determinedSet = List(3, 11, 10, -1, -45, 2, -4, 7, -5, 9, 1, 100, 2, 4, -100, 98, 46)
 
   def randomSet(size: Int = 1000) = {
     val rnd = new scala.util.Random(System.currentTimeMillis())
-    val xs = List.fill(size)(rnd.nextInt(100000))
-    
-    (xs,
-    RBTree.build[Int](xs.map(IntElem(_))),
-    OrderingTree.build[Int](xs.map(IntElem(_)))
-    )
-  }
+    List.fill(size)(rnd.nextInt(100000))
+  }  
+}
 
+
+class RBTreeTest extends UnitSpec with RBTreeBehavior with RBTestSet {
   val detSet = determinedSet
   val rndSet = randomSet(10000)
 
-  "Determined Set with Red Black Tree" should behave like performPrimitiveOperations(detSet._1, detSet._2)
-  it should behave like performComplexOperations(detSet._1, detSet._2)
-  it should behave like processOrderingStatistics(detSet._1, detSet._2)
+  "Determined Set with Red Black Tree" should behave like buildTreeInOrder(detSet)(RBTree.build[Int])
+  it should behave like performComplexOperations(detSet)(RBTree.build[Int])
+  it should behave like processOrderingStatistics(detSet)(RBTree.build[Int])
 
-  "Random Set with Red Black Tree" should behave like performPrimitiveOperations(rndSet._1, rndSet._2)
-  it should behave like performComplexOperations(rndSet._1, rndSet._2)
-  it should behave like processOrderingStatistics(rndSet._1, rndSet._2)
+  "Random Set with Red Black Tree" should behave like buildTreeInOrder(rndSet)(RBTree.build[Int])
+  it should behave like performComplexOperations(rndSet)(RBTree.build[Int])
+  it should behave like processOrderingStatistics(rndSet)(RBTree.build[Int])
   
 
-  "Determined Set with Ordering Tree" should behave like performPrimitiveOperations(detSet._1, detSet._3)
-  it should behave like performComplexOperations(detSet._1, detSet._3)
-  it should behave like processOrderingStatistics(detSet._1, detSet._3)
+  "Determined Set with Ordering Tree" should behave like buildTreeInOrder(detSet)(OrderingTree.build[Int])
+  it should behave like performComplexOperations(detSet)(OrderingTree.build[Int])
+  it should behave like processOrderingStatistics(detSet)(OrderingTree.build[Int])
 
-  "Random Set with Ordering Tree" should behave like performPrimitiveOperations(rndSet._1, rndSet._3)
-  it should behave like performComplexOperations(rndSet._1, rndSet._3)
-  it should behave like processOrderingStatistics(rndSet._1, rndSet._3)
-
+  "Random Set with Ordering Tree" should behave like buildTreeInOrder(rndSet)(OrderingTree.build[Int])
+  it should behave like performComplexOperations(rndSet)(OrderingTree.build[Int])
+  it should behave like processOrderingStatistics(rndSet)(OrderingTree.build[Int])
 }
