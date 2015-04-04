@@ -4,7 +4,7 @@ import com.mentisware.tree._
 import com.mentisware.sort.Orderer
 import com.mentisware.test.UnitSpec
 
-case class IntElem (key: Int) extends Element[Int]
+// case class IntElem (key: Int) extends Element[Int]
 
 
 trait RBTreeBehavior extends SearchTreeBehavior { this: UnitSpec =>
@@ -35,11 +35,12 @@ trait RBTreeBehavior extends SearchTreeBehavior { this: UnitSpec =>
 }
 
 trait RBTestSet {
-  def determinedSet = List(3, 11, 10, -1, -45, 2, -4, 7, -5, 9, 1, 100, 2, 4, -100, 98, 46)
+//  def determinedSet = List(3, 11, 10, -1, -45, 2, -4, 7, -5, 9, 1, 100, 2, 4, -100, 98, 46)
+  def determinedSet = List(3, 2, 0, 0, 3, 2, 3, 1, 3, 0)
 
   def randomSet(size: Int = 1000) = {
     val rnd = new scala.util.Random(System.currentTimeMillis())
-    List.fill(size)(rnd.nextInt(100000))
+    List.fill(size)(rnd.nextInt(1000000))
   }  
 }
 
@@ -47,21 +48,24 @@ trait RBTestSet {
 class RBTreeTest extends UnitSpec with RBTreeBehavior with RBTestSet {
   val detSet = determinedSet
   val rndSet = randomSet(10000)
-
+  
   "Determined Set with Red Black Tree" should behave like buildTreeInOrder(detSet)(RBTree.build[Int])
   it should behave like performComplexOperations(detSet)(RBTree.build[Int])
+  it should behave like dealWithDuplicateKey(detSet)(RBTree.build[Int])
   it should behave like processOrderingStatistics(detSet)(RBTree.build[Int])
 
   "Random Set with Red Black Tree" should behave like buildTreeInOrder(rndSet)(RBTree.build[Int])
   it should behave like performComplexOperations(rndSet)(RBTree.build[Int])
+  it should behave like dealWithDuplicateKey(rndSet)(RBTree.build[Int])
   it should behave like processOrderingStatistics(rndSet)(RBTree.build[Int])
   
-
   "Determined Set with Ordering Tree" should behave like buildTreeInOrder(detSet)(OrderingTree.build[Int])
   it should behave like performComplexOperations(detSet)(OrderingTree.build[Int])
+  it should behave like dealWithDuplicateKey(detSet)(OrderingTree.build[Int])
   it should behave like processOrderingStatistics(detSet)(OrderingTree.build[Int])
 
   "Random Set with Ordering Tree" should behave like buildTreeInOrder(rndSet)(OrderingTree.build[Int])
   it should behave like performComplexOperations(rndSet)(OrderingTree.build[Int])
+  it should behave like dealWithDuplicateKey(rndSet)(OrderingTree.build[Int])
   it should behave like processOrderingStatistics(rndSet)(OrderingTree.build[Int])
 }

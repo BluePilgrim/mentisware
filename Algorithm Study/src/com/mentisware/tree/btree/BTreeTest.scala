@@ -24,8 +24,10 @@ class BTreeTest extends UnitSpec with SearchTreeBehavior with BTreeTestSet {
   degrees.map { t =>
     "Determined Set with B Tree(min degree = " + t +")" should behave like buildTreeInOrder(detSet)(BTree.build[Int](t))
     it should behave like performComplexOperations(detSet)(BTree.build(t))
-  
+    it should behave like dealWithDuplicateKey(detSet)(BTree.build(t))
+
     "Random Set with B Tree(min degree = " + t +")" should behave like buildTreeInOrder(rndSet)(BTree.build(t))
     it should behave like performComplexOperations(rndSet)(BTree.build(t))
+    it should behave like dealWithDuplicateKey(rndSet)(BTree.build(t))
   }
 }

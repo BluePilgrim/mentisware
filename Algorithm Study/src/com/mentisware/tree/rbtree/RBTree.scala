@@ -12,7 +12,7 @@ abstract class RBTree[T : Ordering] extends SearchTree[T] {
   def elem: Element[T]
   def left: RBTree[T]
   def right: RBTree[T]
-  def key : T
+  def key = elem.key
   def size: Int
 
   def keys = Vector(key)
@@ -21,16 +21,25 @@ abstract class RBTree[T : Ordering] extends SearchTree[T] {
   def predecessor: RBTree[T]
   def successor: RBTree[T]
   
-  def search(k: T): RBTree[T] = {
-    if (k == key) this
+  def search(k: T): List[Element[T]] = {
+    def getDuplicates(node: RBTree[T]): List[Element[T]] = node match {
+      case _: NilTree[T] => Nil
+      case _: NormalTree[T] =>
+        // since nodes are movable during the restructuring, we go further.
+        if (node.key > k) getDuplicates(node.left)
+        else if (node.key < k) getDuplicates(node.right)
+        else getDuplicates(node.left) ::: node.elem :: getDuplicates(node.right)
+    }
+    
+    if (k == key) getDuplicates(this)
     else if (k < key) left.search(k)
     else right.search(k)
   }
 
   def apply(k: T): Element[T] = {
-    val node = search(k)
-    
-    if (node != null) node.elem else error(k + "is not in the tree")
+    if (k == key) elem
+    else if (k < key) left(k)
+    else right(k)
   }
 
   def minimum: Option[Element[T]]
@@ -91,12 +100,13 @@ class NilTree[T : Ordering] extends RBTree[T] {
   def elem = error("NilTree.elem")
   def left = error("NilTree.left")
   def right = error("NilTree.right")
-  def key = error("NilTree.key")
+//  def key = error("NilTree.key")
   
   def predecessor = error("NilTree.predecessor")
   def successor = error("NilTree.successor")
-  override def search(k: T) = this
-
+  override def apply(k: T) = error(k + " is not in the tree")
+  override def search(k: T) = error(k + " is not in the tree")
+  
   def rankIn(mainTree: RBTree[T]) = error("NilTree.rankIn")
   override def keyList = Nil
   
@@ -116,7 +126,6 @@ class NormalTree[T : Ordering](
     private val nil: NilTree[T]
     ) extends RBTree[T] {
   def isEmpty = false
-  def key = elem.key
   def size = left.size + right.size + 1
 
   // subclasses based on NormalTree should override this methods to do something for their own.
@@ -473,35 +482,52 @@ class NormalTree[T : Ordering](
     val k = data.key
     
     require(this.color == Black)
-
+    
     def _delete(node: RBTree[T]): (RBTree[T], Boolean) = {
-      if (k < node.key) {     // if the left is NilTree, exception will be raised.
+      if (node.isEmpty) (node, false)
+      else if (k < node.key) {
         val (newLeft, isStale) = _delete(node.left)
-        val newNode = createNode(node.elem, newLeft, node.right, node.color)
+        val newNode =
+          if (newLeft != node.left) createNode(node.elem, newLeft, node.right, node.color) else node
 
         if (isStale) resolveBlackConflict(newNode, true)
         else (newNode, false)
       } else if (k > node.key) {
         val (newRight, isStale) = _delete(node.right)
-        val newNode = createNode(node.elem, node.left, newRight, node.color)
+        val newNode =
+          if (newRight != node.right) createNode(node.elem, node.left, newRight, node.color) else node
 
         if (isStale) resolveBlackConflict(newNode, false)
         else (newNode, false)
       } else {
-        // the node to delete found.
-        if (node.right.isEmpty || node.left.isEmpty) {
-          val replacer = if (node.right.isEmpty) node.left else node.right
-          if (node.color == Black) {
-            if (replacer.color == Red) (createNode(replacer.elem, replacer.left, replacer.right, Black), false)
-            else (replacer, true)
-          } else (replacer, false)
-        } else {    // Neither of two children is empty
-          // select the replacer with the successor for the time being
-          val (newRight, replacer, isStale) = getReplacer(node.right, true)
-          val newNode = createNode(replacer.elem, node.left, newRight, node.color)
-
-          if (isStale) resolveBlackConflict(newNode, false)
-          else (newNode, false)
+        // the node to delete found. - CHANGED TO DEAL WITH DUPLICATE KEYS
+        if (node.elem != e) {
+          val (newLeft, isStale) = _delete(node.left)  // go further to find the precise element
+          if (newLeft != node.left) {
+            val newNode = createNode(node.elem, newLeft, node.right, node.color)
+            if (isStale) resolveBlackConflict(newNode, true) else (newNode, false)
+          } else {
+            val (newRight, isStale) = _delete(node.right)
+            if (newRight != node.right) {
+              val newNode = createNode(node.elem, node.left, newRight, node.color)
+              if (isStale) resolveBlackConflict(newNode, false) else (newNode, false)
+            } else (node, false)    // the element is not in the tree
+          }
+        } else {
+          if (node.right.isEmpty || node.left.isEmpty) {
+            val replacer = if (node.right.isEmpty) node.left else node.right
+            if (node.color == Black) {
+              if (replacer.color == Red) (createNode(replacer.elem, replacer.left, replacer.right, Black), false)
+              else (replacer, true)
+            } else (replacer, false)
+          } else {    // Neither of two children is empty
+            // select the replacer with the successor for the time being
+            val (newRight, replacer, isStale) = getReplacer(node.right, true)
+            val newNode = createNode(replacer.elem, node.left, newRight, node.color)
+  
+            if (isStale) resolveBlackConflict(newNode, false)
+            else (newNode, false)
+          }
         }
       }
     }
