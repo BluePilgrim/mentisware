@@ -40,6 +40,7 @@ trait SearchTreeBehavior { this: UnitSpec =>
     
     it should "return a sorted key list" in {
       val zippedPair = sortedKeys zip tree.keyList
+//      println(zippedPair)
       zippedPair foreach { x =>
         (x._1) should equal (x._2)
       }
@@ -80,9 +81,9 @@ trait SearchTreeBehavior { this: UnitSpec =>
         (x._1) should equal (x._2)
       }
     }
-    
+
     it should "return an empty tree after deleting all elements" in {
-      zs foreach { k => tree = tree.delete(IntElem(k)) }
+      zs foreach { k => tree = tree.delete(IntElem(k))}
       assert(tree.isEmpty(), "Tree is not empty")
     }
   }
