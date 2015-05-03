@@ -23,6 +23,25 @@ class LinkedDisjointSet[T](var sets: List[LinkedSet[T]],
 //  val elemTable = sets.flatMap(s => s.elems.map((_ -> s))).toMap
 
   def set(x: T) = elemTable(x)
+
+  def addSet(x: T) = {
+    val s = new LinkedSet(List(x), 1)
+    val dup = elemTable.getOrElse(x, null)
+    if (dup != null) {
+      // remove a duplicate
+      val es = dup.elems.filter(_ != x)
+      if (es == Nil) sets = sets.filter(_ != dup)
+      else {  
+        dup.elems = es
+        dup.size -= 1
+      }
+      elemTable.remove(x)
+    }
+    elemTable += (x -> s)
+    sets = (s :: sets)
+    this
+  }
+  
   def union(x: T, y: T) = {
     def mergeAndUpdate(s1: LinkedSet[T], s2: LinkedSet[T]) = {
       val xs = s2.elems.map((_, s1))

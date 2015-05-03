@@ -2,6 +2,7 @@ package com.mentisware.disjointset
 
 //
 // Disjoint Set ADT
+// assume that input data contain no duplicate.
 //
 
 trait Set[T] {
@@ -13,6 +14,7 @@ trait Set[T] {
 
 trait DisjointSet[T] {
   def set(x: T) : Set[T]
+  def addSet(x: T): DisjointSet[T]
   def union(x: T, y: T): DisjointSet[T]
   def sets : Seq[Set[T]]
 }
