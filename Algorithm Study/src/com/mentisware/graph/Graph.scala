@@ -8,18 +8,23 @@ case class Edge(src: Vertex, dst: Vertex, w: Double)
 
 trait Graph {
   type V <: Vertex
-  trait ParentTree {
-    def parent(v: V): V
+  trait PredGraph {
+    def pred(v: V): V
     def path(src: V, dst: V): List[V]
+  }
+  trait TimeStamp {
+    def discover(v: V): Int
+    def finish(v: V): Int
   }
   
   def isDirected: Boolean
-  def vertices: Seq[Vertex]
+  def vertices: Seq[V]
   def nVertices: Int
   def edges: Seq[Edge]
   def nEdges: Int
   
-  def bfsTree(s: V): ParentTree    // breadth first search returns a BFS tree
+  def bfsGraph(s: V*): (PredGraph, TimeStamp)            // only consider the first vertex
+  def dfsGraph(s: V*): (PredGraph, TimeStamp)
   
   def error(m: String) = throw new NoSuchElementException(m)
 }

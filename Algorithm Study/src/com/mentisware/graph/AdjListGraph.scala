@@ -3,7 +3,10 @@ package com.mentisware.graph
 
 // assume that a vertex's id is set to the index of the adjacency list
 
-case class AdjVertex(id: Int) extends Vertex
+case class AdjVertex(id: Int) extends Vertex {
+  override def toString = id.toString
+}
+
 case class Adjacency(s: AdjVertex, adjVertices: List[(AdjVertex, Double)])
 
 // vertex color
@@ -15,16 +18,21 @@ object Black extends VColor
 
 class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Graph {  
   type V = AdjVertex
-  class Parents(val p: Vector[V]) extends ParentTree {
-    def parent(v: V) = p(v.id)    
+  class Parents(val p: Vector[V]) extends PredGraph {
+    def pred(v: V) = p(v.id)    
     def path(src: V, dst: V) = {
       def reversePath(s: V, d: V): List[V] =
         if (s == d) List(s)
-        else if (parent(d) == null) Nil
-        else d :: reversePath(s, parent(d))
+        else if (pred(d) == null) Nil
+        else d :: reversePath(s, pred(d))
         
-      reversePath(src, dst).reverse
+      val res = reversePath(src, dst).reverse
+      if (res.isEmpty || res.head != src) Nil else res
     }
+  }
+  class TravTime(val ds: Vector[Int], val fs: Vector[Int]) extends TimeStamp {
+    def discover(v: V) = ds(v.id)
+    def finish(v: V) = fs(v.id)
   }
   
   def isDirected = directed
@@ -36,39 +44,96 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
   def edges = adjList.flatMap(v => v.adjVertices.map(d => Edge(v.s, d._1, d._2)))
   def nEdges = edges.length
   
-  def bfsTree(s: V) = {
+  def bfsGraph(s: V*) = {
     // prepare traversal
-    val parents = Array.fill[V](nVertices)(null)
-    val colors = Array.fill[VColor](nVertices)(White)
-    val d = Array.fill(nVertices)(-1)
+    val nVtx = nVertices
+    val parents = Array.fill[V](nVtx)(null)
+    val colors = Array.fill[VColor](nVtx)(White)
+    val d = Array.fill(nVtx)(-1)
     val vQueue = new scala.collection.mutable.Queue[Int]
+    var time = 0
+    val dTime = Array.fill(nVtx)(0)
+    val fTime = Array.fill(nVtx)(0)
+
+    def visitInBFS(id: Int) {
+      time += 1
+      dTime(id) = time
+      colors(id) = Gray
+      d(id) = 0
+      vQueue.enqueue(id)
+      
+      while (!vQueue.isEmpty) {
+        val u = vQueue.dequeue()
+        adjList(u).adjVertices foreach { adj =>
+          val v = adj._1.id
+          if (colors(v) == White) {
+            time += 1
+            dTime(v) = time
+            colors(v) = Gray
+            d(v) = d(u) + 1
+            parents(v) = adjList(u).s
+            vQueue.enqueue(v)
+          }
+        }
+        time += 1
+        fTime(u) = time
+        colors(u) = Black
+      }
+    }
     
-    colors(s.id) = Gray
-    d(s.id) = 0
-    vQueue.enqueue(s.id)
+    val start = if (s.isEmpty) 0 else s.head.id
+    visitInBFS(start)
     
-    while (!vQueue.isEmpty) {
-      val u = vQueue.dequeue()
+    for (id <- (0 until nVtx))
+      if (colors(id) == White) visitInBFS(id)
+      
+    (new Parents(parents.toVector), new TravTime(dTime.toVector, fTime.toVector))
+  }
+  
+  def dfsGraph(s: V*) = {
+    val nVtx = nVertices
+    val parents = Array.fill[V](nVtx)(null)
+    val colors = Array.fill[VColor](nVtx)(White)
+    var time = 0
+    val dTime = Array.fill(nVtx)(0)
+    val fTime = Array.fill(nVtx)(0)
+    
+    def visitInDFS(u: Int) {
+      require(colors(u) == White)
+      time += 1
+      dTime(u) = time
+      colors(u) = Gray
+      
       adjList(u).adjVertices foreach { adj =>
         val v = adj._1.id
         if (colors(v) == White) {
-          colors(v) = Gray
-          d(v) = d(u) + 1
           parents(v) = adjList(u).s
-          vQueue.enqueue(v)
+          visitInDFS(v)
         }
       }
+      
+      time += 1
+      fTime(u) = time
       colors(u) = Black
     }
     
-    new Parents(parents.toVector)
+    val start = if (s.isEmpty) 0 else s.head.id
+    visitInDFS(start)
+    
+    for (id <- (0 until nVtx)) {
+      if (colors(id) == White) visitInDFS(id)
+    }
+    
+    (new Parents(parents.toVector), new TravTime(dTime.toVector, fTime.toVector))
   }
 }
 
 object AdjListGraph {
+/*
   // automatic conversion of unweighted graph
   implicit def unweighted2weighted(x: (AdjVertex, AdjVertex)): (AdjVertex, AdjVertex, Double) =
     (x._1, x._2, 1.0)
+*/
   
   def apply(isDirected: Boolean, vs: Vector[AdjVertex], edges: (AdjVertex, AdjVertex, Double)*): AdjListGraph = {
     val adjList = Array.fill[List[(AdjVertex, Double)]](vs.length)(Nil)
