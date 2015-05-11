@@ -1,5 +1,6 @@
 package com.mentisware.graph
-
+import com.mentisware.disjointset.DisjointSet
+import com.mentisware.disjointset.ForestSet
 
 // assume that a vertex's id is set to the index of the adjacency list
 
@@ -29,6 +30,15 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
       val res = reversePath(src, dst).reverse
       if (res.isEmpty || res.head != src) Nil else res
     }
+    
+    def connectedSets = {
+      val sets = ForestSet(vertices)
+      vertices foreach { v =>
+        val u = pred(v)
+        if (u != null && sets.set(u) != sets.set(v)) sets.union(u, v)
+      }
+      sets
+    }
   }
   class TravTime(val ds: Vector[Int], val fs: Vector[Int]) extends TimeStamp {
     def discover(v: V) = ds(v.id)
@@ -44,7 +54,7 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
   def edges = adjList.flatMap(v => v.adjVertices.map(d => Edge(v.s, d._1, d._2)))
   def nEdges = edges.length
   
-  def bfsGraph(s: V*) = {
+  def bfsGraph(ss: V*) = {
     // prepare traversal
     val nVtx = nVertices
     val parents = Array.fill[V](nVtx)(null)
@@ -81,8 +91,7 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
       }
     }
     
-    val start = if (s.isEmpty) 0 else s.head.id
-    visitInBFS(start)
+    ss foreach { s => if (colors(s.id) == White) visitInBFS(s.id) }
     
     for (id <- (0 until nVtx))
       if (colors(id) == White) visitInBFS(id)
@@ -90,7 +99,7 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
     (new Parents(parents.toVector), new TravTime(dTime.toVector, fTime.toVector))
   }
   
-  def dfsGraph(s: V*) = {
+  def dfsGraph(ss: V*) = {
     val nVtx = nVertices
     val parents = Array.fill[V](nVtx)(null)
     val colors = Array.fill[VColor](nVtx)(White)
@@ -117,14 +126,126 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
       colors(u) = Black
     }
     
-    val start = if (s.isEmpty) 0 else s.head.id
-    visitInDFS(start)
+    ss foreach { s => if (colors(s.id) == White) visitInDFS(s.id) }
     
     for (id <- (0 until nVtx)) {
       if (colors(id) == White) visitInDFS(id)
     }
     
     (new Parents(parents.toVector), new TravTime(dTime.toVector, fTime.toVector))
+  }
+  
+  def sortTopologically() = {
+    if (isDirected) {
+      val (_, stamp) = dfsGraph()
+      val n = nVertices
+      val vs = Array.fill[AdjVertex](2*n)(null)
+      
+      // stamp.finish is in a range of (n+1, 2n) - NOOOO! in case a forest
+      adjList foreach { adj =>
+        val v = adj.s
+        val f = stamp.finish(v)
+//        assert(f >= n + 1 && f <= 2 * n)
+        vs(2*n - f) = v
+      }
+      
+      vs.filter(_ != null).toVector
+    } else error("no topological sort on undirected graph")
+  }
+  
+  def transpose() = {
+    if (isDirected) {
+      val edges = adjList.flatMap { adj =>
+        adj.adjVertices.map(x => (x._1, adj.s, x._2))
+      }
+      
+      AdjListGraph(true, vertices.toVector, edges: _*).asInstanceOf[this.type]
+    } else this
+  }
+  
+  def stronglyConnectedComponents: DisjointSet[V] = {
+    // The algorithm is
+    // 1. do DFS to generate finish times for each vertex
+    // 2. transpose the graph
+    // 3. do DFS for the transpose in higher finish-time first order (can use the topological sort order)
+    val (scgForest, _) =
+      if (isDirected) this.transpose().dfsGraph(this.sortTopologically(): _*) else dfsGraph()
+    scgForest.connectedSets
+  }
+  
+  def MST_kruskal = {
+    // The algorithm is
+    // 1. sort edges in nondecreasing order by weight (smaller-weight edge first)
+    // 2. if an edge connects two different sets, choose the edge and union the sets
+    if (!isDirected) {
+      import com.mentisware.sort.Sorter    
+      implicit val wOrdering: Ordering[Edge] = Ordering.by(_.w)  // specify ordering by weight
+      
+      var mst: List[Edge] = Nil
+      var sum = 0.0
+      val djsets:DisjointSet[Vertex] = ForestSet(vertices)
+      val sortedEdges = Sorter.quickSort[Edge](edges.toList)
+      sortedEdges foreach { e =>
+        if (djsets.set(e.src) != djsets.set(e.dst)) {
+          mst = e :: mst
+          sum += e.w
+          djsets.union(e.src, e.dst)
+        }
+      }
+      
+      assert(mst.length == nVertices - 1)
+      (mst, sum)
+    } else error("no minimum spanning tree for directed graph")
+  }
+  
+  def MST_prim = {
+    // The algorithm is
+    // put vertices into min heap ordered by the weight(distance) to MST set
+    // start from any vertex and get the minimum weight vertex
+    // update distances to adjacent vertices
+    if (!isDirected) {
+      import com.mentisware.mheap.Element
+      import com.mentisware.mheap.MergeableHeap
+      import com.mentisware.mheap.FibHeap
+      
+      class Dist(val v: AdjVertex, var key: Double) extends Element[Double] {
+        def updateKey(k: Double) = {
+          val org = key
+          key = k
+          org
+        }  
+        override def toString = "(" + key + ", " + v + ")"
+      }
+      
+      var mst: List[Edge] = Nil
+      var sum = 0.0
+      val distances = adjList.map(adj => new Dist(adj.s, Double.PositiveInfinity))
+      val visited = Array.fill(nVertices)(false)
+      val es = Array.fill[Edge](nVertices)(null)
+      
+      distances(0).key = 0.0      // choose vertex 0 as the root for the MST set
+      val distHeap = FibHeap(distances)
+      
+      while (!distHeap.isEmpty) {
+        val u = (distHeap.extractHead match { case Some(x) => x }).asInstanceOf[Dist]
+        println("extracting :" + u)
+        if (es(u.v.id) != null) mst = es(u.v.id) :: mst
+        sum += u.key
+        visited(u.v.id) = true
+        
+        adjList(u.v.id).adjVertices foreach { adj =>
+          val (v, w) = adj
+          val d = distances(v.id)
+          if (!visited(v.id) && d.key > w) {
+            distHeap.updateKey(d, w)
+            es(v.id) = Edge(u.v, v, w)
+          }
+        }
+      }
+      
+      assert(es(0) == null)
+      (mst, sum)
+    } else error("no minimum spanning tree for directed graph")
   }
 }
 

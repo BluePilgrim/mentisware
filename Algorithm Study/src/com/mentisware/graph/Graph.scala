@@ -1,4 +1,5 @@
 package com.mentisware.graph
+import com.mentisware.disjointset.DisjointSet
 
 abstract class Vertex
 
@@ -11,6 +12,7 @@ trait Graph {
   trait PredGraph {
     def pred(v: V): V
     def path(src: V, dst: V): List[V]
+    def connectedSets: DisjointSet[V]
   }
   trait TimeStamp {
     def discover(v: V): Int
@@ -23,8 +25,14 @@ trait Graph {
   def edges: Seq[Edge]
   def nEdges: Int
   
-  def bfsGraph(s: V*): (PredGraph, TimeStamp)            // only consider the first vertex
-  def dfsGraph(s: V*): (PredGraph, TimeStamp)
+  def bfsGraph(ss: V*): (PredGraph, TimeStamp)            // only consider the first vertex
+  def dfsGraph(ss: V*): (PredGraph, TimeStamp)
+  def sortTopologically(): Vector[V]
+  def transpose(): this.type                              // edges are reversed
+  def stronglyConnectedComponents: DisjointSet[V]
+  
+  def MST_kruskal: (Seq[Edge], Double)                    // minimum spanning tree by Kruskal's algorithm
+  def MST_prim: (Seq[Edge], Double)                       // minimum spanning tree by prim's algorithm
   
   def error(m: String) = throw new NoSuchElementException(m)
 }

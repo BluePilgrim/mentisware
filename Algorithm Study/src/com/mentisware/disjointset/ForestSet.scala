@@ -22,7 +22,7 @@ class ReverseTree[T](val data: T, var parent: ReverseTree[T] = null, var rank: I
 class ForestSet[T](var sets: List[ReverseTree[T]],
     private val elemTable: scala.collection.mutable.Map[T, ReverseTree[T]]) extends DisjointSet[T] {
   def set(x: T) = elemTable(x).root
-  
+
   def addSet(x: T) = {
     // cannot deal with duplicates
     val s = new ReverseTree(x, null, 0)
@@ -40,15 +40,22 @@ class ForestSet[T](var sets: List[ReverseTree[T]],
       if (s1.rank > s2.rank) {
         s2.parent = s1
         sets = sets.filter(_ != s2)
+        elemTable += (y -> s1)
       }
       else {
         s1.parent = s2
         sets = sets.filter(_ != s1)
+        elemTable += (x -> s2)
         if (s1.rank == s2.rank) s2.rank += 1
       }
     }
     
     this
+  }
+  
+  override def toString = {
+//    elemTable.map(x => (x._1, x._2.representative)).mkString(", ")
+    elemTable.mapValues(_.representative).groupBy(_._2).mapValues(_.map(_._1)).values.mkString(", ")
   }
 }
 
