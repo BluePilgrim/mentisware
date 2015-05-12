@@ -24,19 +24,19 @@ trait GraphBehavior { this: UnitSpec =>
     }
   }
   
-  def traverseInBFS(g: Graph)(s: g.V, d: g.V) {
-    val (pGraph, stamp) = g.bfsGraph(s)
+  def traverseInBFS(g: Graph)(s: Vertex, d: Vertex) {
+    val pGraph = g.bfsGraph(s)
     val p = pGraph.path(s, d)
     
     it should "traverse a graph in BFS" in {
       (pGraph.pred(s)) should equal (null)
       g.vertices foreach { v =>
-        println(v + " (" + stamp.discover(v) + ", " + stamp.finish(v) + ")" )
+        println(v + " (" + pGraph.discover(v) + ", " + pGraph.finish(v) + ")" )
       }
     }
     
     it should "return a BFS path correctly" in {
-      def checkParent(path: List[g.V], p: g.V) {
+      def checkParent(path: List[Vertex], p: Vertex) {
         if (path != Nil) {
           assert(pGraph.pred(path.head) == p)
           checkParent(path.tail, path.head)
@@ -46,26 +46,26 @@ trait GraphBehavior { this: UnitSpec =>
       if (!p.isEmpty)
         checkParent(p.tail, s)
       else
-        assert(!(stamp.discover(s) < stamp.discover(d) && stamp.finish(s) > stamp.finish(d) ||
-            stamp.discover(s) > stamp.discover(d) && stamp.finish(s) < stamp.finish(d)))
+        assert(!(pGraph.discover(s) < pGraph.discover(d) && pGraph.finish(s) > pGraph.finish(d) ||
+            pGraph.discover(s) > pGraph.discover(d) && pGraph.finish(s) < pGraph.finish(d)))
             
       println("path from " + s + " to " + d + " = " + p)
     }
   }
 
-  def traverseInDFS(g: Graph)(s: g.V, d: g.V) {
-    val (pGraph, stamp, _) = g.dfsGraph(s)
+  def traverseInDFS(g: Graph)(s: Vertex, d: Vertex) {
+    val (pGraph, _) = g.dfsGraph(s)
     val p = pGraph.path(s, d)
     
     it should "traverse a graph in DFS" in {
       (pGraph.pred(s)) should equal (null)
       g.vertices foreach { v =>
-        println(v + " (" + stamp.discover(v) + ", " + stamp.finish(v) + ")" )
+        println(v + " (" + pGraph.discover(v) + ", " + pGraph.finish(v) + ")" )
       }
     }
     
     it should "return a DFS path correctly" in {
-      def checkParent(path: List[g.V], p: g.V) {
+      def checkParent(path: List[Vertex], p: Vertex) {
         if (path != Nil) {
           assert(pGraph.pred(path.head) == p)
           checkParent(path.tail, path.head)
@@ -83,7 +83,7 @@ trait GraphBehavior { this: UnitSpec =>
         val (vs, isAcyclic) = g.sortTopologically()
         (vs.length) should equal (g.nVertices)
         
-        val (_, stamp, _) = g.dfsGraph()
+        val (stamp, _) = g.dfsGraph()
         for (i <- (1 until vs.length)) {
           assert(stamp.finish(vs(i)) < stamp.finish(vs(i-1)))
         }
@@ -116,13 +116,13 @@ trait GraphBehavior { this: UnitSpec =>
     }
   }
   
-  def calculateShortestPathFrom(g: Graph)(s: g.V) {
+  def calculateShortestPathFrom(g: Graph)(s: Vertex) {
     val res1 = g.shortestPathFrom_bellmanford(s)
     val res2 = g.shortestPathFrom_dag(s)
     val res3 = g.shortestPathFrom_dijkstra(s)
     
     if (g.isDirected) {
-      val (pred, stamp, isAcyclic) = g.dfsGraph(s)
+      val (predGraph, isAcyclic) = g.dfsGraph(s)
       if (isAcyclic) {
         it should "return the same results through Bellman-Ford, DAG, and Dijkstra [DAG]" in {
           (res1) should not equal (None)
