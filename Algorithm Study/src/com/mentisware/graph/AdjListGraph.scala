@@ -19,7 +19,7 @@ object Black extends VColor
 
 class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Graph {  
   type V = AdjVertex
-  class Parents(val p: Vector[V]) extends PredGraph {
+  class Parents(val p: Vector[V], val d: Vector[Double] = null) extends PredGraph {
     def pred(v: V) = p(v.id)    
     def path(src: V, dst: V) = {
       def reversePath(s: V, d: V): List[V] =
@@ -29,6 +29,25 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
         
       val res = reversePath(src, dst).reverse
       if (res.isEmpty || res.head != src) Nil else res
+    }
+    def dist(src: V, dst: V) = {
+      if (d != null) {
+        require(d(src.id) == 0.0)
+        d(dst.id)
+      } else {
+        def calculateDist(p: List[V]): Double = {
+          if (p == Nil || p.tail == Nil) 0.0
+          else {
+            val u = p.head
+            val v = p.tail.head
+            adjList(u.id).adjVertices.find(_._1 == v).get._2 + calculateDist(p.tail)
+          }
+        }
+      
+        val p = path(src, dst)
+        if (p == Nil) Double.PositiveInfinity
+        else calculateDist(p)
+      }
     }
     
     def connectedSets = {
@@ -106,6 +125,7 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
     var time = 0
     val dTime = Array.fill(nVtx)(0)
     val fTime = Array.fill(nVtx)(0)
+    var isAcyclic = true
     
     def visitInDFS(u: Int) {
       require(colors(u) == White)
@@ -118,7 +138,7 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
         if (colors(v) == White) {
           parents(v) = adjList(u).s
           visitInDFS(v)
-        }
+        } else if (colors(v) == Gray) isAcyclic = false
       }
       
       time += 1
@@ -132,12 +152,13 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
       if (colors(id) == White) visitInDFS(id)
     }
     
-    (new Parents(parents.toVector), new TravTime(dTime.toVector, fTime.toVector))
+    (new Parents(parents.toVector), new TravTime(dTime.toVector, fTime.toVector), isAcyclic)
   }
   
   def sortTopologically() = {
     if (isDirected) {
-      val (_, stamp) = dfsGraph()
+      val (_, stamp, isAcyclic) = dfsGraph()
+      
       val n = nVertices
       val vs = Array.fill[AdjVertex](2*n)(null)
       
@@ -149,7 +170,7 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
         vs(2*n - f) = v
       }
       
-      vs.filter(_ != null).toVector
+      (vs.filter(_ != null).toVector, isAcyclic)
     } else error("no topological sort on undirected graph")
   }
   
@@ -168,8 +189,8 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
     // 1. do DFS to generate finish times for each vertex
     // 2. transpose the graph
     // 3. do DFS for the transpose in higher finish-time first order (can use the topological sort order)
-    val (scgForest, _) =
-      if (isDirected) this.transpose().dfsGraph(this.sortTopologically(): _*) else dfsGraph()
+    val (scgForest, _, _) =
+      if (isDirected) this.transpose().dfsGraph(this.sortTopologically()._1: _*) else dfsGraph()
     scgForest.connectedSets
   }
   
@@ -227,8 +248,8 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
       val distHeap = FibHeap(distances)
       
       while (!distHeap.isEmpty) {
-        val u = (distHeap.extractHead match { case Some(x) => x }).asInstanceOf[Dist]
-        println("extracting :" + u)
+        val u = (distHeap.extractHead().get).asInstanceOf[Dist]
+//        println("extracting :" + u)
         if (es(u.v.id) != null) mst = es(u.v.id) :: mst
         sum += u.key
         visited(u.v.id) = true
@@ -247,6 +268,115 @@ class AdjListGraph(val adjList: Vector[Adjacency], directed: Boolean) extends Gr
       (mst, sum)
     } else error("no minimum spanning tree for directed graph")
   }
+  
+  def shortestPathFrom_bellmanford(s: V): Option[PredGraph] = {
+    // The algorithm is to perform relaxation (V - 1) times.
+    // If the relaxation does not saturate after (V - 1) times, then the graph has a negative cycle.
+    if (isDirected) {
+      val nVtx = nVertices
+      val pred = Array.fill[AdjVertex](nVtx)(null)
+      val dist = Array.fill[Double](nVtx)(Double.PositiveInfinity)
+      val es = edges
+      dist(s.id) = 0.0
+      
+      for (i <- (1 until nVtx)) {
+        es foreach { e =>
+          e match {
+            case Edge(_u, _v, _w) =>
+              val (u, v, w) = (_u, _v, _w).asInstanceOf[(AdjVertex, AdjVertex, Double)]
+              if (dist(v.id) > dist(u.id) + w) {
+                dist(v.id) = dist(u.id) + w
+                pred(v.id) = u
+              }
+          }
+        }
+      }
+      
+      es foreach { e =>
+        e match {
+          case Edge(_u, _v, _w) =>
+            val (u, v, w) = (_u, _v, _w).asInstanceOf[(AdjVertex, AdjVertex, Double)]
+            if (dist(v.id) > dist(u.id) + w) return None
+        }
+      }
+      
+      Some(new Parents(pred.toVector, dist.toVector))
+    } else None
+  }
+  
+  def shortestPathFrom_dag(s: V) = {
+    // The algorithm is
+    // 1. topologically sort the vertices
+    // 2. perform relaxation onto vertices in the sorted order
+    if (isDirected) {
+      val (sortedVertices, isAcyclic) = sortTopologically()
+      if (isAcyclic) {
+        val nVtx = nVertices
+        val pred = Array.fill[AdjVertex](nVtx)(null)
+        val dist = Array.fill[Double](nVtx)(Double.PositiveInfinity)
+        dist(s.id) = 0
+        
+        sortedVertices foreach { u =>
+          adjList(u.id).adjVertices foreach { e =>
+            val (v, w) = e
+            if (dist(v.id) > dist(u.id) + w) {
+              dist(v.id) = dist(u.id) + w
+              pred(v.id) = u
+            }
+          }
+        }
+        
+        Some(new Parents(pred.toVector, dist.toVector))
+      } else None
+    } else None
+  }
+
+  def shortestPathFrom_dijkstra(s: V) = {
+    // The algorithm is similar to Prim's algorithm for MST
+    // put vertices into min heap ordered by the weight(distance) to source
+    // start from any vertex and get the minimum distance vertex
+    // update distances to the source
+    if (isDirected) {
+      import com.mentisware.mheap.Element
+      import com.mentisware.mheap.MergeableHeap
+      import com.mentisware.mheap.FibHeap
+      
+      class Dist(val v: AdjVertex, var key: Double) extends Element[Double] {
+        def updateKey(k: Double) = {
+          val org = key
+          key = k
+          org
+        }  
+        override def toString = "(" + key + ", " + v + ")"
+      }
+
+      val nVtx = nVertices
+      val distances = adjList.map(adj => new Dist(adj.s, Double.PositiveInfinity))
+      val pred = Array.fill[AdjVertex](nVtx)(null)
+      
+      distances(s.id).key = 0.0      // choose vertex 0 as the root for the MST set
+      val distHeap = FibHeap(distances)
+      
+      while (!distHeap.isEmpty) {
+        val u = (distHeap.extractHead().get).asInstanceOf[Dist]
+//        println("extracting :" + u)
+        val uD = u.key
+        adjList(u.v.id).adjVertices foreach { adj =>
+          val (v, w) = adj
+          val d = distances(v.id)
+          val vD = d.key
+          if (vD > uD + w) {
+            distHeap.updateKey(d, uD + w)
+            pred(v.id) = u.v
+          }
+        }
+      }
+      
+      assert(pred(s.id) == null)
+      Some(new Parents(pred.toVector, distances.map(_.key)))
+    } else None
+  }
+
 }
 
 object AdjListGraph {

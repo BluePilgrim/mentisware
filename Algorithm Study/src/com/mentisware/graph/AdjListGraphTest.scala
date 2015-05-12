@@ -8,10 +8,11 @@ class AdjListGraphTest extends UnitSpec with GraphBehavior with GraphTestSet {
     val graph = AdjListGraph(set._1, set._2, set._3: _*)
     
     "For graph: " + set should behave like checkProperty(graph)(set._2, set._3.length, set._1)
-    it should behave like traverseInBFS(graph)(graph.vertex(7), graph.vertex(1))
-    it should behave like traverseInDFS(graph)(graph.vertex(7), graph.vertex(1))
+    it should behave like traverseInBFS(graph)(graph.vertex(set._2-1), graph.vertex(1))
+    it should behave like traverseInDFS(graph)(graph.vertex(set._2-1), graph.vertex(1))
     it should behave like performTopologicalSort(graph)
     it should behave like calculateSCC(graph)
     it should behave like calculateMST(graph)
+    it should behave like calculateShortestPathFrom(graph)(graph.vertex(0))
   }
 }

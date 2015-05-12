@@ -7,7 +7,8 @@ trait GraphTestSet {
       (false, 8, List((0, 4), (0, 1), (1, 5), (2, 3), (2, 5), (2, 6), (3, 6), (3, 7), (5, 6), (6, 7)).map(e => (e._1, e._2, 1.0))),
       (true, 8, List((0, 4), (1, 0), (4, 1), (1, 5), (5, 4), (2, 1), (2, 5), (6, 2), (6, 5), (3, 6), (7, 6), (3, 7), (7, 3)).map(e => (e._1, e._2, 1.0))),
       (true, 8, List((0, 1), (1, 4), (4, 0), (1, 5), (4, 5), (1, 2), (2, 3), (3, 2), (2, 6), (5, 6), (6, 5), (6, 7), (7, 7), (3, 7)).map(e => (e._1, e._2, 1.0))),
-      (false, 9, List((0, 1, 4), (0, 7, 8), (1, 7, 11), (1, 2, 8), (2, 8, 2), (7, 8, 7), (6, 7, 1), (6, 8, 6), (2, 3, 7), (2, 5, 4), (5, 6, 2), (3, 4, 9), (4, 5, 10), (3, 5, 14)).map(e => (e._1, e._2, e._3.toDouble)))
+      (false, 9, List((0, 1, 4), (0, 7, 8), (1, 7, 11), (1, 2, 8), (2, 8, 2), (7, 8, 7), (6, 7, 1), (6, 8, 6), (2, 3, 7), (2, 5, 4), (5, 6, 2), (3, 4, 9), (4, 5, 10), (3, 5, 14)).map(e => (e._1, e._2, e._3.toDouble))),
+      (true, 6, List((0, 1, 5), (0, 2, 3), (1, 2, 2), (1, 3, 6), (2, 3, 7), (2, 4, 4), (2, 5, 2), (3, 4, 1), (3, 5, 1), (4, 5, 2)).map(e => (e._1, e._2, e._3.toDouble)))
   )
 }
 
@@ -53,7 +54,7 @@ trait GraphBehavior { this: UnitSpec =>
   }
 
   def traverseInDFS(g: Graph)(s: g.V, d: g.V) {
-    val (pGraph, stamp) = g.dfsGraph(s)
+    val (pGraph, stamp, _) = g.dfsGraph(s)
     val p = pGraph.path(s, d)
     
     it should "traverse a graph in DFS" in {
@@ -79,10 +80,10 @@ trait GraphBehavior { this: UnitSpec =>
   def performTopologicalSort(g: Graph) {
     it should "sort a graph topologically" in {
       if (g.isDirected) {
-        val vs = g.sortTopologically()
+        val (vs, isAcyclic) = g.sortTopologically()
         (vs.length) should equal (g.nVertices)
         
-        val (_, stamp) = g.dfsGraph()
+        val (_, stamp, _) = g.dfsGraph()
         for (i <- (1 until vs.length)) {
           assert(stamp.finish(vs(i)) < stamp.finish(vs(i-1)))
         }
@@ -103,13 +104,58 @@ trait GraphBehavior { this: UnitSpec =>
   }
 
   def calculateMST(g: Graph) {
-    if (!g.isDirected) {
-      val res1 = g.MST_kruskal
-      val res2 = g.MST_prim
-      
-      (res1._1.length) should equal (g.nVertices - 1)
-      (res2._1.length) should equal (g.nVertices - 1)
-      (res1._2) should equal (res2._2)
+    it should "return same result through Kruskal and Prim algorithms" in {
+      if (!g.isDirected) {
+        val res1 = g.MST_kruskal
+        val res2 = g.MST_prim
+        
+        (res1._1.length) should equal (g.nVertices - 1)
+        (res2._1.length) should equal (g.nVertices - 1)
+        (res1._2) should equal (res2._2)
+      }
+    }
+  }
+  
+  def calculateShortestPathFrom(g: Graph)(s: g.V) {
+    val res1 = g.shortestPathFrom_bellmanford(s)
+    val res2 = g.shortestPathFrom_dag(s)
+    val res3 = g.shortestPathFrom_dijkstra(s)
+    
+    if (g.isDirected) {
+      val (pred, stamp, isAcyclic) = g.dfsGraph(s)
+      if (isAcyclic) {
+        it should "return the same results through Bellman-Ford, DAG, and Dijkstra [DAG]" in {
+          (res1) should not equal (None)
+          (res2) should not equal (None)
+          (res3) should not equal (None)
+          
+          val pathGraph1 = res1.get
+          val pathGraph2 = res2.get
+          val pathGraph3 = res3.get
+          g.vertices foreach { v =>
+            (pathGraph1.dist(s, v)) should equal (pathGraph2.dist(s, v))
+            (pathGraph1.dist(s, v)) should equal (pathGraph3.dist(s, v))
+          }
+        }
+      } else {
+        it should "return the same results through Bellman-Ford and Dijkstra in case of no negative cycle [Directed Graph]" in {
+          if (res1 != None) {
+            (res3) should not equal (None)
+            val pathGraph1 = res1.get
+            val pathGraph3 = res3.get
+            g.vertices foreach { v =>
+              (pathGraph1.dist(s, v)) should equal (pathGraph3.dist(s, v))            
+            }
+          }
+          (res2) should equal (None)
+        }
+      }
+    } else {
+      it should "return None [Undirected Graph]" in {
+        (res1) should equal (None)
+        (res2) should equal (None)
+        (res3) should equal (None)
+      }
     }
   }
 }

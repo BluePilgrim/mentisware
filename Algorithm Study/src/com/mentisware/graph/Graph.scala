@@ -12,6 +12,7 @@ trait Graph {
   trait PredGraph {
     def pred(v: V): V
     def path(src: V, dst: V): List[V]
+    def dist(src: V, dst: V): Double
     def connectedSets: DisjointSet[V]
   }
   trait TimeStamp {
@@ -26,13 +27,19 @@ trait Graph {
   def nEdges: Int
   
   def bfsGraph(ss: V*): (PredGraph, TimeStamp)            // only consider the first vertex
-  def dfsGraph(ss: V*): (PredGraph, TimeStamp)
-  def sortTopologically(): Vector[V]
+  def dfsGraph(ss: V*): (PredGraph, TimeStamp, Boolean)   // also checks if the graph is cyclic or acyclic
+  def sortTopologically(): (Vector[V], Boolean)           // also returns flag for acyclic
   def transpose(): this.type                              // edges are reversed
   def stronglyConnectedComponents: DisjointSet[V]
   
   def MST_kruskal: (Seq[Edge], Double)                    // minimum spanning tree by Kruskal's algorithm
   def MST_prim: (Seq[Edge], Double)                       // minimum spanning tree by prim's algorithm
+  
+  def shortestPathFrom_bellmanford(s: V): Option[PredGraph]      // single source shortest path
+                                                                 // in case of negative cycle, returns None
+  def shortestPathFrom_dag(s: V): Option[PredGraph]       // shortest path for dag
+  def shortestPathFrom_dijkstra(s: V): Option[PredGraph]
+  
   
   def error(m: String) = throw new NoSuchElementException(m)
 }
