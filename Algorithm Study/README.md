@@ -1,4 +1,6 @@
 # mentisware / Algorithm Study
+<< Implementation of Data Structures and Algorithms in the CLR book with the Scala Language >>
+
 This repository has been created to enhance my understanding on Scala and to refresh the knowledge on algorithms.
 
 Various algorithms and data structures introduced in the famous book, "Introduction to Algorithms, 3rd Edition, by Cormen, Leiserson, and Rivest"(aka. CLR) have been implemented in Scala from scratch.
