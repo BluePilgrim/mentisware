@@ -8,7 +8,9 @@ trait GraphTestSet {
       (true, 8, List((0, 4), (1, 0), (4, 1), (1, 5), (5, 4), (2, 1), (2, 5), (6, 2), (6, 5), (3, 6), (7, 6), (3, 7), (7, 3)).map(e => (e._1, e._2, 1.0))),
       (true, 8, List((0, 1), (1, 4), (4, 0), (1, 5), (4, 5), (1, 2), (2, 3), (3, 2), (2, 6), (5, 6), (6, 5), (6, 7), (7, 7), (3, 7)).map(e => (e._1, e._2, 1.0))),
       (false, 9, List((0, 1, 4), (0, 7, 8), (1, 7, 11), (1, 2, 8), (2, 8, 2), (7, 8, 7), (6, 7, 1), (6, 8, 6), (2, 3, 7), (2, 5, 4), (5, 6, 2), (3, 4, 9), (4, 5, 10), (3, 5, 14)).map(e => (e._1, e._2, e._3.toDouble))),
-      (true, 6, List((0, 1, 5), (0, 2, 3), (1, 2, 2), (1, 3, 6), (2, 3, 7), (2, 4, 4), (2, 5, 2), (3, 4, 1), (3, 5, 1), (4, 5, 2)).map(e => (e._1, e._2, e._3.toDouble)))
+      (true, 6, List((0, 1, 5), (0, 2, 3), (1, 2, 2), (1, 3, 6), (2, 3, 7), (2, 4, 4), (2, 5, 2), (3, 4, 1), (3, 5, 1), (4, 5, 2)).map(e => (e._1, e._2, e._3.toDouble))),
+      (true, 3, List((0, 1, 1), (1, 2, -3), (2, 0, 4))map(e => (e._1, e._2, e._3.toDouble))),
+      (true, 3, List((0, 1, 1), (1, 2, -3), (2, 0, 1))map(e => (e._1, e._2, e._3.toDouble)))
   )
 }
 
@@ -17,10 +19,14 @@ trait GraphBehavior { this: UnitSpec =>
     it should "return basic properties correctly" in {
       (g.isDirected) should equal (isDirected)
       (g.nVertices) should equal (nVertices)
-      if (isDirected)
-        (g.nEdges) should equal (nEdges)
-      else
-        (g.nEdges) should equal (2 * nEdges)
+      
+      // currently implementation of adjacent matrix implementation does not support multiple edges between (i, j)
+      if (!g.isInstanceOf[AdjMatrixGraph]) {
+        if (isDirected)
+          (g.nEdges) should equal (nEdges)
+        else
+          (g.nEdges) should equal (2 * nEdges)
+      }
     }
   }
   
@@ -115,11 +121,12 @@ trait GraphBehavior { this: UnitSpec =>
       }
     }
   }
-  
+
+
   def calculateShortestPathFrom(g: Graph)(s: Vertex) {
     val res1 = g.shortestPathFrom_bellmanford(s)
     val res2 = g.shortestPathFrom_dag(s)
-    val res3 = g.shortestPathFrom_dijkstra(s)
+    val res3 = if (res1 == None) None else g.shortestPathFrom_dijkstra(s)
     
     if (g.isDirected) {
       val (predGraph, isAcyclic) = g.dfsGraph(s)
@@ -158,4 +165,36 @@ trait GraphBehavior { this: UnitSpec =>
       }
     }
   }
+
+  def calculateAllPairsShortestPath(g: Graph) {
+    val res1 = g.allPairsShortestPath_edgeDP
+    val res2 = g.allPairsShortestPath_edgeDP
+    val n = g.nVertices
+    
+    if (g.isDirected) {
+      it should "return the same results through edge-based DP algorithms [Directed Graph]" in {
+        if (res1 == None) {
+          (res2) should equal (None)
+        } else {
+          (res1) should not equal (None)
+          (res2) should not equal (None)
+          
+          val pathGraph1 = res1.get
+          val pathGraph2 = res2.get
+          
+          for (i <- 0 until n; s = g.vertices(i); j <- 0 until n; v = g.vertices(j)) {
+            val pg = g.shortestPathFrom_bellmanford(s).get
+            (pathGraph1(i).dist(s, v)) should equal (pathGraph2(i).dist(s, v))
+            (pathGraph2(i).dist(s, v)) should equal (pg.dist(s, v))
+          }
+        }
+      }
+    } else {
+      it should "return None through edge-based DP algorithms [Undirected Graph]" in {
+        (res1) should equal (None)
+        (res2) should equal (None)
+      }
+    }
+  }
+
 }

@@ -14,7 +14,9 @@ case class Matrix[T: Numeric] (val m: Vector[Vector[T]]) {
     case that: Matrix[_] =>
       this.m == that.m && this.rows == that.rows && this.cols == that.cols
   }
-
+  
+  def apply(i: Int)(j: Int) = m(i)(j)
+  
   private def _add(m1: _Matrix, m2: _Matrix): _Matrix =
     (m1 zip m2).map { row =>
       (row._1 zip row._2).map(e => e._1 + e._2)

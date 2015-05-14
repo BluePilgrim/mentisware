@@ -1,16 +1,12 @@
 package com.mentisware.graph
-import com.mentisware.disjointset.DisjointSet
-import com.mentisware.disjointset.ForestSet
 
 // assume that a vertex's id is set to the index of the adjacency list
 
 class AdjListGraph(
+    directed: Boolean,
     val vertices: Vector[Vertex],
-    val adjList: Vector[List[(Vertex, Double)]],
-    directed: Boolean) extends Graph {
+    val adjList: Vector[List[(Vertex, Double)]]) extends Graph {
   require(vertices.length == adjList.length)
-  type V = Vertex
-  
   def isDirected = directed
   def nVertices = vertices.length
   
@@ -19,13 +15,18 @@ class AdjListGraph(
     l.map(y => Edge(s, y._1, y._2))
   }
   def nEdges = edges.length
-  def edge(src: V, dst: V) = {
+  def edge(src: Vertex, dst: Vertex) = {
     adjList(src).find(_._1 == dst) match {
       case Some((v, w)) => Some(Edge(src, v, w))
       case _ => None
     }
   }
-  def adjVertices(s: V) = adjList(s)
+  def weight(src: Vertex, dst: Vertex) = edge(src, dst) match {
+    case Some(Edge(_, _, w)) => w
+    case _ => Double.PositiveInfinity
+  }
+  
+  def adjVertices(s: Vertex) = adjList(s)
     
   def transpose() = {
     if (isDirected) {
@@ -36,15 +37,12 @@ class AdjListGraph(
       AdjListGraph(true, vertices.toVector, es: _*).asInstanceOf[this.type]
     } else this
   }
+  
+  def allPairsShortestPath_edgeDP = error("not implemented")
+  def allPairsShortestPath_fastEdgeDP = error("not implemented")
 }
 
 object AdjListGraph {
-/*
-  // automatic conversion of unweighted graph
-  implicit def unweighted2weighted(x: (AdjVertex, AdjVertex)): (AdjVertex, AdjVertex, Double) =
-    (x._1, x._2, 1.0)
-*/
-  
   def apply(isDirected: Boolean, vs: Vector[Vertex], edges: (Vertex, Vertex, Double)*): AdjListGraph = {
     val adjList = Array.fill[List[(Vertex, Double)]](vs.length)(Nil)
     edges foreach { e =>
@@ -57,7 +55,7 @@ object AdjListGraph {
       adjList(s) = ((d, w) :: adjList(s))
     }
     
-    new AdjListGraph(vs, adjList.toVector, isDirected)
+    new AdjListGraph(isDirected, vs, adjList.toVector)
   }
   
   def apply(isDirected: Boolean, nVs: Int, edges: (Int, Int, Double)*): AdjListGraph = {

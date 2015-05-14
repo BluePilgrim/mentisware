@@ -32,10 +32,11 @@ trait Graph {
   def edges: Seq[Edge]
   def nEdges: Int
   def edge(src: Vertex, dst: Vertex): Option[Edge]
+  def weight(src: Vertex, dst: Vertex): Double
   def adjVertices(src: Vertex): Seq[(Vertex, Double)]
   
   
-    def bfsGraph(ss: Vertex*): PredGraph = {
+  def bfsGraph(ss: Vertex*): PredGraph = {
     // prepare traversal
     val parents = Array.fill[Vertex](nVertices)(null)
     val colors = Array.fill[VColor](nVertices)(White)
@@ -280,6 +281,7 @@ trait Graph {
     } else None
   }
 
+  // assume that the graph contains no negative-weight cycle
   def shortestPathFrom_dijkstra(s: Vertex): Option[PredGraph] = {
     // The algorithm is similar to Prim's algorithm for MST
     // put vertices into min heap ordered by the weight(distance) to source
@@ -325,6 +327,10 @@ trait Graph {
     } else None
   }
 
+  // currently, implemented for adjacent matrix representation
+  def allPairsShortestPath_edgeDP: Option[Vector[PredGraph]]
+  def allPairsShortestPath_fastEdgeDP: Option[Vector[PredGraph]]
+  
   def error(m: String) = throw new NoSuchElementException(m)
 
   class PredGraph(
