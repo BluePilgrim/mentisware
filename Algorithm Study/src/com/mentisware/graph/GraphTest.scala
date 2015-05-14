@@ -214,6 +214,18 @@ trait GraphBehavior { this: UnitSpec =>
           }
         }
       }
+      
+      it should "calculate a transitive closure [Undirected Graph]" in {
+        if (res1 != None) {
+          val pg = res1.get
+          val t1 = g.transitiveClosure
+          val t2 = pg.map(_.d).map(_.map(w => if (w == Double.PositiveInfinity) 0.0 else 1.0))
+          
+          for (i <- 0 until n; j <- 0 until n) {
+            (t1.weight(g.vertices(i), g.vertices(j))) should equal (t2(i)(j))
+          }
+        }
+      }
     } else {
       it should "return None through edge-based DP algorithms [Undirected Graph]" in {
         (res1) should equal (None)

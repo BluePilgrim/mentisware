@@ -331,6 +331,7 @@ trait Graph {
   def allPairsShortestPath_edgeDP: Option[Vector[PredGraph]]
   def allPairsShortestPath_fastEdgeDP: Option[Vector[PredGraph]]
   def allPairsShortestPath_floydwarshall: Option[Vector[PredGraph]]
+  def transitiveClosure: this.type
   
   def error(m: String) = throw new NoSuchElementException(m)
 

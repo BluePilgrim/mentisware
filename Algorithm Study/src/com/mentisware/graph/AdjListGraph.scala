@@ -41,6 +41,7 @@ class AdjListGraph(
   def allPairsShortestPath_edgeDP = error("not implemented")
   def allPairsShortestPath_fastEdgeDP = error("not implemented")
   def allPairsShortestPath_floydwarshall = error("not implemented")
+  def transitiveClosure = error("not implemented")
 }
 
 object AdjListGraph {

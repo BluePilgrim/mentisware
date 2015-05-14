@@ -185,9 +185,35 @@ class AdjMatrixGraph(
       Some(for (i <- 0 until n toVector) yield new PredGraph(ps(i), null, ds.m(i)))
     } else None
   }
+  
+  def transitiveClosure: this.type = {
+    // The algorithm is
+    // 1. map the orginal matrix into boolean (0, 1) matrix
+    // 2. for updateDistance, t_new(i, j) = t(i, j) | (t(i, k) & t(k, j))
+    //
+    // this can be also applied to unweighted graphs treating them as weighted ones
+    
+    val n = nVertices
+    
+    def updateDistance(D: Vector[Vector[Boolean]], k: Int): Vector[Vector[Boolean]] = {
+      for (i <- 0 until n toVector) yield {
+        for (j <- 0 until n toVector) yield {
+            D(i)(j) || (D(i)(k) && D(k)(j))
+        }
+      }
+    }
+    
+    val b = adjMat.m.map(_.map(w => if (w == Double.PositiveInfinity) false else true))
+    
+    val t = (b /: (0 until n))((ds, k) => updateDistance(ds, k))
+//      println("ps1 = " + ps + "\nps2 = " + getPreds(ds))
+    
+    (new AdjMatrixGraph(isDirected, vertices,
+        Matrix(t.map(_.map(p => if (p) 1.0 else 0.0))))).asInstanceOf[this.type]
+  }
 }
 
-object AdjMatrixGraph {
+object AdjMatrixGraph {  
   def apply(isDirected: Boolean, vs: Vector[Vertex], edges: (Vertex, Vertex, Double)*): AdjMatrixGraph = {
     val n = vs.length
     val m = Array.tabulate(n, n)((i, j) => if (i == j) 0.0 else Double.PositiveInfinity)
