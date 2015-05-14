@@ -1,5 +1,4 @@
-# mentisware / Algorithm Study
-<< Implementation of Data Structures and Algorithms in the CLR book with the Scala Language >>
+# Implementation of Data Structures and Algorithms in the CLR book with the Scala Language
 
 This repository has been created to enhance my understanding on Scala and to refresh the knowledge on algorithms.
 
