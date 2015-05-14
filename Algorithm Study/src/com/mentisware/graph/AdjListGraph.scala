@@ -23,7 +23,7 @@ class AdjListGraph(
   }
   def weight(src: Vertex, dst: Vertex) = edge(src, dst) match {
     case Some(Edge(_, _, w)) => w
-    case _ => Double.PositiveInfinity
+    case _ => if (src == dst) 0.0 else Double.PositiveInfinity
   }
   
   def adjVertices(s: Vertex) = adjList(s)
@@ -40,6 +40,7 @@ class AdjListGraph(
   
   def allPairsShortestPath_edgeDP = error("not implemented")
   def allPairsShortestPath_fastEdgeDP = error("not implemented")
+  def allPairsShortestPath_floydwarshall = error("not implemented")
 }
 
 object AdjListGraph {

@@ -55,7 +55,7 @@ trait GraphBehavior { this: UnitSpec =>
         assert(!(pGraph.discover(s) < pGraph.discover(d) && pGraph.finish(s) > pGraph.finish(d) ||
             pGraph.discover(s) > pGraph.discover(d) && pGraph.finish(s) < pGraph.finish(d)))
             
-      println("path from " + s + " to " + d + " = " + p)
+//      println("path from " + s + " to " + d + " = " + p)
     }
   }
 
@@ -79,7 +79,7 @@ trait GraphBehavior { this: UnitSpec =>
       }
       
       if (!p.isEmpty) checkParent(p.tail, s)
-      println("path from " + s + " to " + d + " = " + p)
+//      println("path from " + s + " to " + d + " = " + p)
     }
   }
   
@@ -168,7 +168,9 @@ trait GraphBehavior { this: UnitSpec =>
 
   def calculateAllPairsShortestPath(g: Graph) {
     val res1 = g.allPairsShortestPath_edgeDP
-    val res2 = g.allPairsShortestPath_edgeDP
+    val res2 = g.allPairsShortestPath_fastEdgeDP
+    val res3 = if (res1 != None) g.allPairsShortestPath_floydwarshall else None
+          
     val n = g.nVertices
     
     if (g.isDirected) {
@@ -178,14 +180,37 @@ trait GraphBehavior { this: UnitSpec =>
         } else {
           (res1) should not equal (None)
           (res2) should not equal (None)
+          (res3) should not equal (None)
           
           val pathGraph1 = res1.get
           val pathGraph2 = res2.get
+          val pathGraph3 = res3.get
           
           for (i <- 0 until n; s = g.vertices(i); j <- 0 until n; v = g.vertices(j)) {
             val pg = g.shortestPathFrom_bellmanford(s).get
             (pathGraph1(i).dist(s, v)) should equal (pathGraph2(i).dist(s, v))
+            (pathGraph1(i).dist(s, v)) should equal (pathGraph3(i).dist(s, v))
             (pathGraph2(i).dist(s, v)) should equal (pg.dist(s, v))
+            
+            // check if the calculated path is correct
+            val p1 = pathGraph1(i).path(s, v)
+            val p2 = pathGraph2(i).path(s, v)
+            val p3 = pathGraph3(i).path(s, v)
+            val p4 = pg.path(s, v)
+/*            println("p1: for source " + s + ": p = " + pathGraph1(i).p)
+            println("p2: for source " + s + ": p = " + pathGraph2(i).p)
+            println("p3: for source " + s + ": p = " + pathGraph3(i).p)
+            println("p4: for source " + s + ": p = " + pg.p)
+
+            
+            println("p1 from " + s + " to " + v + ": " + p1)
+            println("p2 from " + s + " to " + v + ": " + p2)
+            println("p3 from " + s + " to " + v + ": " + p3)
+            println("p4 from " + s + " to " + v + ": " + p4)
+*/
+            (pathGraph1(i).dist(s, v)) should equal (pathGraph1(i).calculateDist(p1))
+            (pathGraph2(i).dist(s, v)) should equal (pathGraph2(i).calculateDist(p2))
+            (pathGraph3(i).dist(s, v)) should equal (pathGraph3(i).calculateDist(p3))
           }
         }
       }
@@ -193,6 +218,7 @@ trait GraphBehavior { this: UnitSpec =>
       it should "return None through edge-based DP algorithms [Undirected Graph]" in {
         (res1) should equal (None)
         (res2) should equal (None)
+        (res3) should equal (None)
       }
     }
   }

@@ -47,8 +47,13 @@ class AdjMatrixGraph(
       def reduce(i: Int, j: Int, a: Matrix[Double], b: Matrix[Double], pred: Vertex): (Double, Vertex) = {
         val ws = (a.m(i) zip b.m.map(_(j))).map(e => e._1 + e._2)
         val res = ((Double.PositiveInfinity, pred, 0) /: ws) { (res, w) =>
-          if (res._1 <= w) (res._1, res._2, res._3+1) else (w, vertices(res._3), res._3+1)
+          val (l, p, k) = res
+          if (l < w) (l, p, k+1)
+          else if (k == j) (w, pred, k+1)      // when k == j, then input distance and pred is used.
+          else (w, vertices(k), k+1)
         }
+//        println("[reduce] for (i, j) = (" + i + "," + j + "), pred = " + pred + "new pred = " + res._2)
+//        println("[reduce]      ws = " + ws)
         (res._1, res._2)
       }
   
@@ -66,7 +71,7 @@ class AdjMatrixGraph(
       val L, W = adjMat
       val PI0 = for (i <- 0 until n toVector) yield {
           for (j <- 0 until n toVector) yield {
-            if (W.m(i)(j) == Double.PositiveInfinity) null else vertices(i)
+            if (W(i)(j) == Double.PositiveInfinity) null else vertices(i)
           }
       }
       
@@ -83,16 +88,20 @@ class AdjMatrixGraph(
   private def getPreds(dists: Matrix[Double]): Vector[Vector[Vertex]] = {
     // calculate the predecessor, if shortest path p(i, j) = p(i, k) + e(k, j), then pred(i, j) = k
     // for such k, d(i, j) == d(i, k) + w(k, j)
+    // corner case : k might be equal to i, but k should not be j
     val n = nVertices
     for (i <- 0 until n toVector) yield {
       for (j <- 0 until n toVector) yield {
-        val d = dists(i)(j)
-        if (d != Double.PositiveInfinity) {
-          var k = 0
-          while (d != dists(i)(k) + adjMat(k)(j)) k += 1    // this loop should terminate.
-          assert(k >= 0 && k < n)
-          vertices(k)
-        } else null
+        if (i == j) vertices(i)
+        else {
+          val d = dists(i)(j)
+          if (d != Double.PositiveInfinity) {
+            var k = 0
+            while (k == j || d != dists(i)(k) + adjMat(k)(j)) k += 1    // this loop should terminate.
+            assert(k >= 0 && k < n)
+            vertices(k)
+          } else null
+        }
       }
     }
   }
@@ -134,10 +143,48 @@ class AdjMatrixGraph(
       if (dists != ds2) None
       else {
         val ps = getPreds(dists)
+//        println("dists = " + dists)
+//        println("preds = " + ps)
         Some(for (i <- 0 until n toVector) yield new PredGraph(ps(i), null, dists.m(i)))
       }
     } else None
-  }  
+  }
+  
+  def allPairsShortestPath_floydwarshall: Option[Vector[PredGraph]] = {
+    // The algorithm is a dynamic programming focusing on intermediate vertex instead of edge
+    // it considers k in the range of (0, n-1)
+    // 1. Initially, set D to W of the original graph
+    // 2. By considering the possible intermediate vertex range of (0, k), update D
+    
+    if (isDirected) {
+      val n = nVertices
+      
+      def updateDistance(
+          D: Matrix[Double], P: Vector[Vector[Vertex]],
+          k: Int): (Matrix[Double], Vector[Vector[Vertex]]) = {
+        val res = for (i <- 0 until n toVector) yield {
+          for (j <- 0 until n toVector) yield {
+            val d = D(i)(k) + D(k)(j)
+            if (D(i)(j) <= d) (D(i)(j), P(i)(j))
+            else (d, P(k)(j))
+          }
+        }
+        (Matrix(res.map(_.map(_._1))), res.map(_.map(_._2)))
+      }
+      
+      val W = adjMat
+      val PI0 = for (i <- 0 until n toVector) yield {
+          for (j <- 0 until n toVector) yield {
+            if (W.m(i)(j) == Double.PositiveInfinity) null else vertices(i)
+          }
+      }
+      
+      val (ds, ps) = ((W, PI0) /: (0 until n))((ds, k) => updateDistance(ds._1, ds._2, k))
+//      println("ps1 = " + ps + "\nps2 = " + getPreds(ds))
+      
+      Some(for (i <- 0 until n toVector) yield new PredGraph(ps(i), null, ds.m(i)))
+    } else None
+  }
 }
 
 object AdjMatrixGraph {

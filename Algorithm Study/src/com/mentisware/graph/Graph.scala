@@ -330,6 +330,7 @@ trait Graph {
   // currently, implemented for adjacent matrix representation
   def allPairsShortestPath_edgeDP: Option[Vector[PredGraph]]
   def allPairsShortestPath_fastEdgeDP: Option[Vector[PredGraph]]
+  def allPairsShortestPath_floydwarshall: Option[Vector[PredGraph]]
   
   def error(m: String) = throw new NoSuchElementException(m)
 
@@ -339,33 +340,34 @@ trait Graph {
       val d: Vector[Double] = null) {
     def pred(v: Vertex) = p(v)
     
-    def path(src: Vertex, dst: Vertex) = {
+    def path(src: Vertex, dst: Vertex): List[Vertex] = {
       def reversePath(s: Vertex, d: Vertex): List[Vertex] =
         if (s == d) List(s)
-        else if (pred(d) == null) Nil
+        else if (pred(d) == null || pred(d) == d) Nil
         else d :: reversePath(s, pred(d))
         
       val res = reversePath(src, dst).reverse
       if (res.isEmpty || res.head != src) Nil else res
     }
     
+    def calculateDist(p: List[Vertex]): Double = {
+      if (p == Nil) Double.PositiveInfinity
+      else if (p.tail == Nil) 0.0
+      else {
+        val u = p.head
+        val v = p.tail.head
+        edge(u, v) match {
+          case Some(e) => e.w + calculateDist(p.tail)
+          case _ => Double.PositiveInfinity
+        }
+      }
+    }
+
     def dist(src: Vertex, dst: Vertex) = {
       if (d != null) {
         require(d(src) == 0.0)
         d(dst)
       } else {
-        def calculateDist(p: List[Vertex]): Double = {
-          if (p == Nil || p.tail == Nil) 0.0
-          else {
-            val u = p.head
-            val v = p.tail.head
-            edge(u, v) match {
-              case Some(e) => e.w + calculateDist(p.tail)
-              case _ => Double.PositiveInfinity
-            }
-          }
-        }
-      
         val p = path(src, dst)
         if (p == Nil) Double.PositiveInfinity
         else calculateDist(p)
