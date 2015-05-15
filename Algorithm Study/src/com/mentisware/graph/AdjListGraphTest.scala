@@ -14,5 +14,6 @@ class AdjListGraphTest extends UnitSpec with GraphBehavior with GraphTestSet {
     it should behave like calculateSCC(graph)
     it should behave like calculateMST(graph)
     it should behave like calculateShortestPathFrom(graph)(graph.vertices(0))
+    it should behave like performJohnsonsAlgorithm(graph)
   }
 }

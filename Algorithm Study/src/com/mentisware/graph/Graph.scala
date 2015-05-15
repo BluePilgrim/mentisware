@@ -333,6 +333,32 @@ trait Graph {
   def allPairsShortestPath_floydwarshall: Option[Vector[PredGraph]]
   def transitiveClosure: this.type
   
+  def addDummySource(): (this.type, Vertex)  // add a dummy source connecting to all vertices with 0 weight
+  def reweight(f: (Vertex, Vertex) => Double) : this.type
+  def allPairsShortestPath_johnson: Option[Vector[PredGraph]] = {  // good for sparse graph
+    // generate a new graph which introduces a new dummy source, s
+    val (g, s) = addDummySource()
+    
+    // calculate a new weight function from dist(s, v)
+    g.shortestPathFrom_bellmanford(s) match {
+      case None => None
+      case Some(pg) =>
+        val reweightedG = reweight((u, v) => weight(u, v) + pg.dist(s, u) - pg.dist(s, v))
+        val ps = reweightedG.vertices.map(reweightedG.shortestPathFrom_dijkstra(_).get).toVector
+        val ds = for (i <- 0 until nVertices toVector) yield {
+          for (j <- 0 until nVertices toVector) yield {
+            ps(i).d(j) + pg.dist(s, vertices(j)) - pg.dist(s, vertices(i))
+          }
+        }
+        
+//        println("for dummy source: " + g.edges)
+//        println("distance from s: " + pg.d)
+//        println("reweighted edges: " + reweightedG.edges)
+//        println("restored distance: " + ds)
+        Some((ps zip ds).map(x => new PredGraph(x._1.p, x._1.stamp, x._2)))
+    }
+  }
+  
   def error(m: String) = throw new NoSuchElementException(m)
 
   class PredGraph(

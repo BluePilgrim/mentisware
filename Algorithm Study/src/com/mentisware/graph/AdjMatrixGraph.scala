@@ -211,6 +211,27 @@ class AdjMatrixGraph(
     (new AdjMatrixGraph(isDirected, vertices,
         Matrix(t.map(_.map(p => if (p) 1.0 else 0.0))))).asInstanceOf[this.type]
   }
+  
+  def addDummySource() = {
+    val s = Vertex(nVertices)
+    val newVs = vertices :+ s
+    val newAdjMat = Matrix {
+      adjMat.m.map(_ :+ Double.PositiveInfinity) :+ Vector.fill(nVertices+1)(0.0)
+    }
+    (new AdjMatrixGraph(true, newVs, newAdjMat).asInstanceOf[this.type], s)
+  }
+  
+  def reweight(f: ((Vertex, Vertex) => Double)) = {
+    val m = for (i <- 0 until nVertices toVector) yield {
+      for (j <- 0 until nVertices toVector) yield {
+//        if (i == j) adjMat(i)(i)
+//        else
+        f(vertices(i), vertices(j))
+      }
+    }
+    
+    new AdjMatrixGraph(isDirected, vertices, Matrix(m)).asInstanceOf[this.type]
+  }
 }
 
 object AdjMatrixGraph {  

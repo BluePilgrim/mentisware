@@ -9,8 +9,8 @@ trait GraphTestSet {
       (true, 8, List((0, 1), (1, 4), (4, 0), (1, 5), (4, 5), (1, 2), (2, 3), (3, 2), (2, 6), (5, 6), (6, 5), (6, 7), (7, 7), (3, 7)).map(e => (e._1, e._2, 1.0))),
       (false, 9, List((0, 1, 4), (0, 7, 8), (1, 7, 11), (1, 2, 8), (2, 8, 2), (7, 8, 7), (6, 7, 1), (6, 8, 6), (2, 3, 7), (2, 5, 4), (5, 6, 2), (3, 4, 9), (4, 5, 10), (3, 5, 14)).map(e => (e._1, e._2, e._3.toDouble))),
       (true, 6, List((0, 1, 5), (0, 2, 3), (1, 2, 2), (1, 3, 6), (2, 3, 7), (2, 4, 4), (2, 5, 2), (3, 4, 1), (3, 5, 1), (4, 5, 2)).map(e => (e._1, e._2, e._3.toDouble))),
-      (true, 3, List((0, 1, 1), (1, 2, -3), (2, 0, 4))map(e => (e._1, e._2, e._3.toDouble))),
-      (true, 3, List((0, 1, 1), (1, 2, -3), (2, 0, 1))map(e => (e._1, e._2, e._3.toDouble)))
+      (true, 3, List((0, 1, 1), (1, 2, -3), (2, 0, 4)).map(e => (e._1, e._2, e._3.toDouble))),
+      (true, 3, List((0, 1, 1), (1, 2, -3), (2, 0, 1)).map(e => (e._1, e._2, e._3.toDouble)))
   )
 }
 
@@ -231,6 +231,31 @@ trait GraphBehavior { this: UnitSpec =>
         (res1) should equal (None)
         (res2) should equal (None)
         (res3) should equal (None)
+      }
+    }    
+  }
+
+  def performJohnsonsAlgorithm(g: Graph) {
+    if (g.isDirected) {
+      val res = g.allPairsShortestPath_johnson
+      if (res != None) {
+        it should "return shortest paths for all pairs via Johnson\'s algorithm" in {
+          g.vertices foreach { s =>
+            val _pg = g.shortestPathFrom_bellmanford(s)
+            val pg2 = res.get(s)
+            (_pg) should not equal (None)
+            val pg = _pg.get
+            
+            println("for " + s)
+            println("jonhson: " + pg2.d)
+            println("bellman-ford: " + pg.d)
+            g.vertices foreach { v =>
+              val p = pg2.path(s, v)
+              (pg.dist(s, v)) should equal (pg2.dist(s, v))
+              (pg.dist(s, v)) should equal (pg2.calculateDist(p))
+            }
+          }
+        }
       }
     }
   }

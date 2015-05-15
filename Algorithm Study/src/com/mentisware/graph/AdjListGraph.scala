@@ -42,6 +42,20 @@ class AdjListGraph(
   def allPairsShortestPath_fastEdgeDP = error("not implemented")
   def allPairsShortestPath_floydwarshall = error("not implemented")
   def transitiveClosure = error("not implemented")
+  
+  def addDummySource() = {
+    // undirected graph can be regarded as directed graph
+    val s = Vertex(nVertices)
+    val newVs = vertices :+ s
+    val newAdjList = adjList :+ vertices.map((_, 0.0)).toList
+    (new AdjListGraph(true, newVs, newAdjList).asInstanceOf[this.type], s)
+  }
+  
+  def reweight(f: (Vertex, Vertex) => Double) = {
+    val newEdges = edges.map(e => (e.src, e.dst, f(e.src, e.dst)))
+    
+    AdjListGraph(isDirected, vertices, newEdges: _*).asInstanceOf[this.type]
+  }
 }
 
 object AdjListGraph {
